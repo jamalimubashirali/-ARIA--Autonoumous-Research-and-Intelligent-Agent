@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     azure_openai_api_deployment_model_1: str = "Llama-3.3-70B-Instruct"        # Heavy (analyst, writer)
     azure_openai_api_deployment_model_2: str = "Llama-4-Maverick-17B-128E-Instruct-FP8"  # Light (planner)
 
-    # ==== Embedding Model (Azure AI Foundry) ====
-    azure_embedding_endpoint: str = ""     # Cohere-embed-v3-english deployment endpoint
-    azure_embedding_api_key: str = ""      # Separate key if different from LLM
-    azure_embedding_model: str = "Cohere-embed-v3-english"
+    # ==== Embedding Model (OpenRouter) ====
+    openrouter_embedding_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_api_key: str = ""      # Your OpenRouter API Key
+    openrouter_embedding_model: str = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
     embedding_dimensions: int = 1024
 
     # ==== Database (Supabase PostgreSQL) ====
