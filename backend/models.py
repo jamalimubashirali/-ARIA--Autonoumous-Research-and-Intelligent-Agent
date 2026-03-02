@@ -5,7 +5,7 @@ Dual-tier LLM factory for ARIA agent nodes.
 - "heavy"  → Llama-3.3-70B-Instruct (powerful — used for Analyst, Writer)
 """
 
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from config import settings
 
 # Valid tiers
@@ -17,24 +17,28 @@ _MODEL_MAP = {
     TIER_HEAVY: settings.azure_openai_api_deployment_model_1,  # Llama 70B
 }
 
-
-def get_llm(tier: str = TIER_HEAVY, temperature: float = 0.0) -> AzureChatOpenAI:
-    """
-    Return a LangChain chat model backed by Azure AI Foundry.
-
-    Args:
-        tier: "light" for Planner tasks, "heavy" for Analyst/Writer tasks.
-        temperature: Sampling temperature (0.0 = deterministic).
-    """
+def get_llm(tier: str = TIER_HEAVY, temperature: float = 0.0) -> ChatOpenAI:
     if tier not in _MODEL_MAP:
         raise ValueError(f"Invalid model tier '{tier}'. Use '{TIER_LIGHT}' or '{TIER_HEAVY}'.")
 
     deployment = _MODEL_MAP[tier]
 
-    return AzureChatOpenAI(
-        azure_deployment=deployment,
-        azure_endpoint=settings.azure_openai_endpoint,
-        api_key=settings.azure_openai_api_key,
-        api_version="2024-12-01-preview",
-        temperature=temperature,
-    )
+    try:
+        return ChatOpenAI(
+            model=deployment,
+            base_url=settings.azure_openai_endpoint,
+            api_key=settings.azure_openai_api_key,
+            temperature=temperature,
+            max_retries=2
+        )
+    except Exception as e:
+        # Fallback to TIER_HEAVY if TIER_LIGHT setup fails directly
+        if tier == TIER_LIGHT:
+            return ChatOpenAI(
+                model=_MODEL_MAP[TIER_HEAVY],
+                base_url=settings.azure_openai_endpoint,
+                api_key=settings.azure_openai_api_key,
+                temperature=temperature,
+                max_retries=2
+            )
+        raise e

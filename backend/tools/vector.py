@@ -7,7 +7,7 @@ and async SQLAlchemy for pgvector operations.
 import uuid
 from typing import Optional
 
-from langchain_openai import AzureOpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,25 +19,24 @@ from db.models import ReportChunk
 # ---------------------------------------------------------------------------
 # Embedding model (singleton-ish, created once on first call)
 # ---------------------------------------------------------------------------
-_embeddings_model: AzureOpenAIEmbeddings | None = None
+_embeddings_model: OpenAIEmbeddings | None = None
 
 
-def get_embeddings_model() -> AzureOpenAIEmbeddings | None:
-    """Return a LangChain AzureOpenAIEmbeddings instance (or None if not configured)."""
+def get_embeddings_model() -> OpenAIEmbeddings | None:
+    """Return a LangChain OpenAIEmbeddings instance configured for OpenRouter (or None if not configured)."""
     global _embeddings_model
 
     if _embeddings_model is not None:
         return _embeddings_model
 
-    if not settings.azure_embedding_endpoint or not settings.azure_embedding_api_key:
-        print("[Vector] Embedding model not configured — skipping vector ops")
+    if not settings.openrouter_api_key:
+        print("[Vector] OpenRouter API key not configured — skipping vector ops")
         return None
 
-    _embeddings_model = AzureOpenAIEmbeddings(
-        azure_deployment=settings.azure_embedding_model,
-        azure_endpoint=settings.azure_embedding_endpoint,
-        api_key=settings.azure_embedding_api_key,
-        api_version="2024-12-01-preview",
+    _embeddings_model = OpenAIEmbeddings(
+        model=settings.openrouter_embedding_model,
+        api_key=settings.openrouter_api_key,
+        base_url=settings.openrouter_embedding_base_url,
     )
     return _embeddings_model
 

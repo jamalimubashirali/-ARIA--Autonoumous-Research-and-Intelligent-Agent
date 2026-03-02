@@ -7,7 +7,6 @@ from api.users import router as users_router
 from api.sharing import router as sharing_router
 from api.export import router as export_router
 from api.rate_limiter import RateLimitMiddleware
-from api.auth import setup_auth
 import uvicorn
 
 app = FastAPI(
@@ -18,8 +17,11 @@ app = FastAPI(
 
 # Middleware (execution order: from bottom to top, i.e., last added is outermost)
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from api.auth import clerk_auth_middleware
+
 # 3. Innermost: Authentication
-setup_auth(app)
+app.add_middleware(BaseHTTPMiddleware, dispatch=clerk_auth_middleware)
 
 # 2. Middle: Rate Limiting
 app.add_middleware(RateLimitMiddleware)
