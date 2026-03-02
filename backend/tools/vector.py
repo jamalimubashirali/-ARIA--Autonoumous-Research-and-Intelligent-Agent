@@ -1,43 +1,189 @@
-from supabase import create_client, Client
+"""
+Vector operations for ARIA — embedding, search, and chunk storage.
+
+Uses LangChain AzureOpenAIEmbeddings for embeddings
+and async SQLAlchemy for pgvector operations.
+"""
+import uuid
+from typing import Optional
+
+from langchain_openai import AzureOpenAIEmbeddings
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from config import settings
-from typing import Dict, Any
+from db.session import AsyncSessionLocal
+from db.models import ReportChunk
 
-def get_supabase_client() -> Client:
-    # Use service key for backend operations
-    return create_client(settings.supabase_url, settings.supabase_service_key)
 
-async def vector_search(query: str, domain: str, limit: int = 3) -> Dict[str, Any]:
-    if not settings.supabase_url or not settings.supabase_service_key:
-        # If no supabase project exists yet, return empty context
-        return {"documents": []}
-        
+# ---------------------------------------------------------------------------
+# Embedding model (singleton-ish, created once on first call)
+# ---------------------------------------------------------------------------
+_embeddings_model: AzureOpenAIEmbeddings | None = None
+
+
+def get_embeddings_model() -> AzureOpenAIEmbeddings | None:
+    """Return a LangChain AzureOpenAIEmbeddings instance (or None if not configured)."""
+    global _embeddings_model
+
+    if _embeddings_model is not None:
+        return _embeddings_model
+
+    if not settings.azure_embedding_endpoint or not settings.azure_embedding_api_key:
+        print("[Vector] Embedding model not configured — skipping vector ops")
+        return None
+
+    _embeddings_model = AzureOpenAIEmbeddings(
+        azure_deployment=settings.azure_embedding_model,
+        azure_endpoint=settings.azure_embedding_endpoint,
+        api_key=settings.azure_embedding_api_key,
+        api_version="2024-12-01-preview",
+    )
+    return _embeddings_model
+
+
+# ---------------------------------------------------------------------------
+# Embedding helpers
+# ---------------------------------------------------------------------------
+async def embed_text(text_input: str) -> list[float] | None:
+    """Generate an embedding for a document chunk.
+
+    Returns a list of floats (e.g. 1024 dims for Cohere v3) or None on failure.
+    """
+    model = get_embeddings_model()
+    if model is None:
+        return None
+
     try:
-        supabase: Client = get_supabase_client()
-        
-        # 1. Generate embedding for query (In a real app, use OpenAI or an open source model here to get the query vector)
-        # Using a dummy vector for illustration if not installed
-        # from langchain_openai import OpenAIEmbeddings
-        # embeddings = OpenAIEmbeddings()
-        # query_vector = embeddings.embed_query(query)
-        
-        # We would then query standard rpc function 'match_report_chunks' (requires creating RPC in Supabase first)
-        # Assuming rpc looks like:
-        # response = supabase.rpc("match_report_chunks", {
-        #     "query_embedding": query_vector,
-        #     "match_threshold": 0.75,
-        #     "match_count": limit,
-        #     "filter_domain": domain
-        # }).execute()
-        
-        # For Phase 1, we return mock historical knowledge if applicable 
-        return {
-            "documents": [
-                # {"content": "...", "metadata": {"source": "report_123"}}
-            ]
-        }
+        vectors = model.embed_documents([text_input[:8192]])
+        return vectors[0]
     except Exception as e:
-        return {"error": f"Vector search failed: {str(e)}"}
+        print(f"[Vector] embed_text failed: {e}")
+        return None
 
-async def save_report_and_chunks(user_id: str, query: str, domain: str, report: str, chunks: list):
-    """Utility to save report generated to DB"""
-    pass # Implementation for Supabase storing
+
+async def embed_query(query: str) -> list[float] | None:
+    """Embed a search query (uses asymmetric embedding if model supports it)."""
+    model = get_embeddings_model()
+    if model is None:
+        return None
+
+    try:
+        return model.embed_query(query[:8192])
+    except Exception as e:
+        print(f"[Vector] embed_query failed: {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Vector Search (pgvector via match_report_chunks RPC)
+# ---------------------------------------------------------------------------
+async def vector_search(
+    query: str,
+    domain: str,
+    user_id: uuid.UUID | None = None,
+    limit: int = 5,
+) -> list[dict]:
+    """Retrieve relevant report chunks from pgvector using cosine similarity.
+
+    Returns list of {id, report_id, content, domain, similarity}.
+    """
+    query_embedding = await embed_query(query)
+    if query_embedding is None:
+        return []
+
+    async with AsyncSessionLocal() as db:
+        try:
+            result = await db.execute(
+                text("""
+                    SELECT id, report_id, content, domain, similarity
+                    FROM match_report_chunks(
+                        :query_embedding::vector,
+                        :match_count,
+                        :filter_domain,
+                        :filter_user_id
+                    )
+                """),
+                {
+                    "query_embedding": str(query_embedding),
+                    "match_count": limit,
+                    "filter_domain": domain,
+                    "filter_user_id": str(user_id) if user_id else None,
+                },
+            )
+            rows = result.fetchall()
+            return [
+                {
+                    "id": str(row[0]),
+                    "report_id": str(row[1]),
+                    "content": row[2],
+                    "domain": row[3],
+                    "similarity": float(row[4]),
+                }
+                for row in rows
+            ]
+        except Exception as e:
+            print(f"[Vector] search failed: {e}")
+            return []
+
+
+# ---------------------------------------------------------------------------
+# Save Report Chunks (embed + store after report generation)
+# ---------------------------------------------------------------------------
+async def save_report_chunks(
+    report_id: uuid.UUID,
+    user_id: uuid.UUID,
+    domain: str,
+    report_content: str,
+    chunk_size: int = 1500,
+) -> int:
+    """Split report into chunks, embed each, and store in report_chunks table.
+
+    Returns the number of chunks saved.
+    """
+    # Simple paragraph-aware chunking
+    paragraphs = report_content.split("\n\n")
+    chunks: list[str] = []
+    current_chunk = ""
+
+    for para in paragraphs:
+        if len(current_chunk) + len(para) > chunk_size and current_chunk:
+            chunks.append(current_chunk.strip())
+            current_chunk = para
+        else:
+            current_chunk += "\n\n" + para if current_chunk else para
+
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+
+    # Batch embed all chunks at once (much more efficient than one-by-one)
+    model = get_embeddings_model()
+    embeddings: list[list[float] | None] = []
+
+    if model is not None and chunks:
+        try:
+            embeddings = model.embed_documents(chunks)
+        except Exception as e:
+            print(f"[Vector] Batch embedding failed: {e}")
+            embeddings = [None] * len(chunks)
+    else:
+        embeddings = [None] * len(chunks)
+
+    # Store in DB
+    saved = 0
+    async with AsyncSessionLocal() as db:
+        for idx, chunk_text in enumerate(chunks):
+            chunk = ReportChunk(
+                report_id=report_id,
+                user_id=user_id,
+                domain=domain,
+                content=chunk_text,
+                embedding=embeddings[idx] if idx < len(embeddings) else None,
+                chunk_index=idx,
+            )
+            db.add(chunk)
+            saved += 1
+
+        await db.commit()
+
+    return saved

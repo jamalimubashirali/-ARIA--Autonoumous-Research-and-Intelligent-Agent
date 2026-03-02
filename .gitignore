@@ -1,0 +1,34 @@
+# ==== Python ====
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+*.egg
+
+# ==== Node.js ====
+node_modules/
+.next/
+out/
+
+# ==== Environment & Secrets ====
+.env
+.env.local
+.env.*.local
+
+# ==== IDE ====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==== OS ====
+.DS_Store
+Thumbs.db
+
+# ==== Logs ====
+*.log
+npm-debug.log*

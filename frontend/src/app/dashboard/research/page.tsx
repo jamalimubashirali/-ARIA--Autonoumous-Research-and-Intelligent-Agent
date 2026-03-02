@@ -58,14 +58,15 @@ export default function NewResearchPage() {
                   <SelectValue placeholder="Select a domain" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="technology">
-                    Technology & Software
+                  <SelectItem value="sales">
+                    Sales & B2B Intelligence
                   </SelectItem>
                   <SelectItem value="finance">Finance & Markets</SelectItem>
                   <SelectItem value="healthcare">
                     Healthcare & Biotech
                   </SelectItem>
-                  <SelectItem value="general">General Research</SelectItem>
+                  <SelectItem value="legal">Legal & Compliance</SelectItem>
+                  <SelectItem value="sports">Sports & Athletics</SelectItem>
                 </SelectContent>
               </Select>
             </div>

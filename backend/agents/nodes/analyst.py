@@ -1,41 +1,249 @@
-from langchain_anthropic import ChatAnthropic
+"""
+Corrective RAG Analyst Node.
+
+Implements the CRAG (Corrective Retrieval-Augmented Generation) pattern:
+  1. Retrieve top-k chunks from pgvector
+  2. Grade each chunk for relevance (LLM binary grading)
+  3. If >50% irrelevant → rewrite the query → re-retrieve
+  4. If still insufficient → fallback to supplementary web search
+  5. Synthesize ONLY graded-relevant chunks into analysis
+"""
+import asyncio
+from typing import List
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from pydantic import BaseModel, Field
 
 from agents.state import ResearchState
-from config import settings
+from models import get_llm, TIER_HEAVY, TIER_LIGHT
+from tools.vector import vector_search
+from tools.search import tavily_search
 
-def analyst_node(state: ResearchState) -> dict:
-    print(f"--- ANALYST NODE: Domain {state['domain']} ---")
-    
-    if state.get("error"):
-        print("Error detected in state, analyst skipping or handling error...")
-        
-    llm = ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0, api_key=settings.anthropic_api_key)
-    
-    # Format gathered data
-    search_context = "\n".join([f"Source ({res.get('url')}): {res.get('content')}" for res in state.get("search_results", [])])
-    scrape_context = "\n---\n".join(state.get("scraped_content", []))
-    
-    # In a full production system, we would also query Supabase pgvector here (RAG)
-    rag_context = state.get("rag_context", "No historical context found.")
-    
+
+# ---------------------------------------------------------------------------
+# Pydantic schemas for structured output
+# ---------------------------------------------------------------------------
+class ChunkGrade(BaseModel):
+    relevant: bool = Field(description="True if the chunk is relevant to the query")
+    reason: str = Field(description="Brief reason for the grade")
+
+
+class QueryRewrite(BaseModel):
+    rewritten_query: str = Field(description="Improved query for better retrieval")
+
+
+# ---------------------------------------------------------------------------
+# Sub-chains
+# ---------------------------------------------------------------------------
+def _build_grading_chain():
+    """Binary relevance grader — grades each retrieved chunk."""
+    llm = get_llm(tier=TIER_LIGHT, temperature=0)
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are an expert analyst. Your job is to synthesize raw research data into a coherent, comprehensive analysis block.
-Do not write the final report. Instead, provide a detailed summary of facts, numbers, key points, and insights extracted from the provided data.
-Group related information together. Ensure all key metrics and important claims are retained."""),
-        ("user", "Query: {query}\n\nSearch Results:\n{search_context}\n\nScraped Deep-dives:\n{scrape_context}\n\nHistorical Context:\n{rag_context}")
+        ("system", """You are a relevance grader. Given a user query and a retrieved document chunk, determine if the chunk contains information relevant to answering the query.
+
+Rules:
+- A chunk is RELEVANT if it contains facts, data, or context that helps answer the query.
+- A chunk is IRRELEVANT if it is off-topic, too vague, or about a different subject.
+- Be strict — only mark as relevant if it genuinely contributes useful information."""),
+        ("user", "Query: {query}\n\nChunk:\n{chunk}")
     ])
-    
-    chain = prompt | StrOutputParser()
-    
+
+    return prompt | llm.with_structured_output(ChunkGrade)
+
+
+def _build_rewrite_chain():
+    """Query rewriter — produces a better query when retrieval quality is low."""
+    llm = get_llm(tier=TIER_LIGHT, temperature=0.3)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are a query optimizer. The original query retrieved mostly irrelevant results from a knowledge base.
+
+Rewrite the query to be more specific and likely to retrieve relevant information.
+- Add domain-specific terminology
+- Be more precise about what information is needed
+- Keep the core intent unchanged"""),
+        ("user", "Original query: {query}\nDomain: {domain}\nIrrelevant chunks received: {irrelevant_count}/{total_count}")
+    ])
+
+    return prompt | llm.with_structured_output(QueryRewrite)
+
+
+def _build_synthesis_chain():
+    """Synthesize relevant chunks + search data into analysis."""
+    llm = get_llm(tier=TIER_HEAVY, temperature=0)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are an expert analyst. Synthesize the provided research data into a coherent, comprehensive analysis block.
+
+You have TWO data sources:
+1. **Historical Context** — Previously generated report chunks from our knowledge base (high trust)
+2. **Live Research** — Fresh search results and scraped content (verify against historical if possible)
+
+Rules:
+- Group related information under clear sub-headings.
+- Retain ALL key metrics, financial figures, and important claims.
+- Flag any contradictions between sources.
+- Note the recency and reliability of each data point.
+- Prioritize historical context where it is recent and relevant.
+- Be thorough — the Writer node depends entirely on your analysis."""),
+        ("user", """Query: {query}
+
+Historical Context (RAG):
+{rag_context}
+
+Live Search Results:
+{search_context}
+
+Scraped Deep-dives:
+{scrape_context}""")
+    ])
+
+    return prompt | llm | StrOutputParser()
+
+
+# ---------------------------------------------------------------------------
+# Main CRAG node
+# ---------------------------------------------------------------------------
+async def analyst_node(state: ResearchState) -> dict:
+    """Corrective RAG Analyst — retrieve, grade, rewrite, synthesize.
+
+    Uses LIGHT model for grading/rewriting, HEAVY model for synthesis.
+    """
+    print(f"--- ANALYST NODE (CRAG): Domain {state['domain']} ---")
+
+    if state.get("error"):
+        print("Error detected in state, analyst attempting partial analysis...")
+
+    query = state["query"]
+    domain = state["domain"]
+    rag_query_rewrites = 0
+    rag_web_fallback = False
+    relevant_chunks = []
+
+    # ---- Step 1: Retrieve from pgvector ----
+    print("  [CRAG] Step 1: Retrieving from vector store...")
+    retrieved = await vector_search(query, domain, limit=8)
+    print(f"  [CRAG] Retrieved {len(retrieved)} chunks")
+
+    # ---- Step 2: Grade each chunk ----
+    if retrieved:
+        print("  [CRAG] Step 2: Grading retrieved chunks...")
+        grading_chain = _build_grading_chain()
+
+        grades = []
+        for chunk in retrieved:
+            try:
+                grade = grading_chain.invoke({
+                    "query": query,
+                    "chunk": chunk["content"][:2000],
+                })
+                grades.append(grade)
+            except Exception as e:
+                print(f"  [CRAG] Grading failed for chunk: {e}")
+                # Assume relevant if grading fails (conservative)
+                grades.append(ChunkGrade(relevant=True, reason="Grading failed, assumed relevant"))
+
+        relevant_chunks = [
+            chunk for chunk, grade in zip(retrieved, grades) if grade.relevant
+        ]
+        irrelevant_count = len(retrieved) - len(relevant_chunks)
+        print(f"  [CRAG] Graded: {len(relevant_chunks)} relevant, {irrelevant_count} irrelevant")
+
+        # ---- Step 3: Rewrite query if >50% irrelevant ----
+        if irrelevant_count > len(retrieved) / 2:
+            print("  [CRAG] Step 3: >50% irrelevant — rewriting query...")
+            rewrite_chain = _build_rewrite_chain()
+
+            try:
+                rewrite = rewrite_chain.invoke({
+                    "query": query,
+                    "domain": domain,
+                    "irrelevant_count": irrelevant_count,
+                    "total_count": len(retrieved),
+                })
+                rewritten_query = rewrite.rewritten_query
+                rag_query_rewrites = 1
+                print(f"  [CRAG] Rewritten query: '{rewritten_query}'")
+
+                # Re-retrieve with improved query
+                re_retrieved = await vector_search(rewritten_query, domain, limit=8)
+                print(f"  [CRAG] Re-retrieved {len(re_retrieved)} chunks")
+
+                # Re-grade
+                for chunk in re_retrieved:
+                    # Skip duplicates
+                    if any(rc["id"] == chunk["id"] for rc in relevant_chunks):
+                        continue
+                    try:
+                        grade = grading_chain.invoke({
+                            "query": rewritten_query,
+                            "chunk": chunk["content"][:2000],
+                        })
+                        if grade.relevant:
+                            relevant_chunks.append(chunk)
+                    except Exception:
+                        relevant_chunks.append(chunk)  # Assume relevant on error
+
+                print(f"  [CRAG] After rewrite: {len(relevant_chunks)} total relevant chunks")
+
+            except Exception as e:
+                print(f"  [CRAG] Query rewrite failed: {e}")
+
+    # ---- Step 4: Web search fallback if still insufficient ----
+    if len(relevant_chunks) < 2:
+        print("  [CRAG] Step 4: Insufficient RAG results, triggering web search fallback...")
+        rag_web_fallback = True
+        try:
+            web_results = await tavily_search(query, num_results=5)
+            if isinstance(web_results, dict) and "results" in web_results:
+                # Add web results to search_results state
+                state_search = state.get("search_results", [])
+                state_search.extend(web_results["results"])
+                print(f"  [CRAG] Added {len(web_results['results'])} web fallback results")
+        except Exception as e:
+            print(f"  [CRAG] Web fallback failed: {e}")
+
+    # ---- Step 5: Synthesize ----
+    print("  [CRAG] Step 5: Synthesizing analysis...")
+
+    # Format RAG context
+    rag_context = "\n\n---\n\n".join([
+        f"[Similarity: {c.get('similarity', 'N/A'):.3f}] {c['content']}"
+        for c in relevant_chunks
+    ]) if relevant_chunks else "No relevant historical context found."
+
+    # Format search context
+    search_context = "\n".join([
+        f"Source ({res.get('url')}): {res.get('content', '')[:2000]}"
+        for res in state.get("search_results", [])
+    ])
+
+    scrape_context = "\n---\n".join(state.get("scraped_content", []))
+
+    synthesis_chain = _build_synthesis_chain()
     try:
-        analysis = chain.invoke({
-            "query": state["query"],
-            "search_context": search_context[:15000], # Guardrails on length
+        analysis = synthesis_chain.invoke({
+            "query": query,
+            "rag_context": rag_context[:15000],
+            "search_context": search_context[:15000],
             "scrape_context": scrape_context[:30000],
-            "rag_context": rag_context
         })
-        return {"analysis": analysis}
+
+        # Update metadata
+        metadata = state.get("metadata", {})
+        metadata["rag_chunks_retrieved"] = len(retrieved) if retrieved else 0
+        metadata["rag_chunks_relevant"] = len(relevant_chunks)
+        metadata["rag_query_rewrites"] = rag_query_rewrites
+        metadata["rag_web_fallback"] = rag_web_fallback
+
+        return {
+            "analysis": analysis,
+            "rag_context": rag_context,
+            "rag_query_rewrites": rag_query_rewrites,
+            "rag_web_fallback": rag_web_fallback,
+            "metadata": metadata,
+        }
     except Exception as e:
-        return {"error": f"Analyst failed: {str(e)}"}
+        return {"error": f"Analyst synthesis failed: {str(e)}"}
