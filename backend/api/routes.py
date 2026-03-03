@@ -20,6 +20,7 @@ from db.models import Report, User
 from api.reports import get_or_create_user
 from api.users import PLAN_LIMITS
 from tools.vector import save_report_chunks
+from models import get_token_tracker
 
 
 def _extract_title(report_content: str, fallback_query: str) -> str:
@@ -86,6 +87,10 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
     final_report = None
     sources = []
 
+    # Reset token tracker for this request
+    tracker = get_token_tracker()
+    tracker.reset()
+
     try:
         async for output in research_graph.astream(initial_state):
             for node_name, state_update in output.items():
@@ -144,6 +149,7 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
                 content=final_report,
                 sources={"items": sources} if sources else None,
                 generation_time_ms=elapsed_ms,
+                token_count=tracker.total or None,
             )
             db.add(report)
 

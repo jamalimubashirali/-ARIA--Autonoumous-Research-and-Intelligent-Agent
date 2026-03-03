@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List
 
 from agents.state import ResearchState
-from models import get_llm, TIER_LIGHT
+from models import get_llm, TIER_LIGHT, get_token_tracker, extract_tokens
 
 
 class PlannerOutput(BaseModel):
@@ -49,6 +49,9 @@ Rules:
             "query": state["query"],
             "focus_prompt": focus_prompt or "No specific focus — cover all angles.",
         })
+        # Token tracking: structured output wraps AIMessage, try to get usage
+        p, c = extract_tokens(result)
+        get_token_tracker().add(p, c)
         return {"sub_tasks": result.sub_tasks}
     except Exception as e:
         print(f"Planner structured output failed, trying raw parse: {e}")

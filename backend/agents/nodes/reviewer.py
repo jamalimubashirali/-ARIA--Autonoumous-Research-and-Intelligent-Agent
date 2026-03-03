@@ -13,7 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from agents.state import ResearchState
-from models import get_llm, TIER_HEAVY
+from models import get_llm, TIER_HEAVY, get_token_tracker, extract_tokens
 
 
 class ReviewerOutput(BaseModel):
@@ -89,6 +89,9 @@ Final Report to Review:
             "analysis": state.get("analysis", "No analysis provided.")[:10000],
             "report": state["final_report"][:15000],
         })
+        # Token tracking
+        p, c = extract_tokens(review)
+        get_token_tracker().add(p, c)
 
         avg_score = (
             review.completeness_score

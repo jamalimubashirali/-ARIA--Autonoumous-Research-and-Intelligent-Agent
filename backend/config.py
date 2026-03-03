@@ -39,8 +39,9 @@ class Settings(BaseSettings):
 
     # ==== Observability (LangSmith) ====
     langchain_tracing_v2: str = "false"
+    langchain_endpoint: str = "https://eu.api.smith.langchain.com"
     langchain_api_key: str = ""
-    langchain_project: str = "ARIA_Agent"
+    langchain_project: str = "ARIA-Autonomous-Research-Intelligent-Agent"
 
     def _make_url(self, drivername: str) -> URL:
         """Build a SQLAlchemy URL object with proper escaping."""

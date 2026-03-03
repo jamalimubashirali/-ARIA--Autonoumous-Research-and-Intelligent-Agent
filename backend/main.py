@@ -1,3 +1,28 @@
+"""
+ARIA Backend — FastAPI Application
+
+Sets up LangSmith tracing BEFORE any LangChain imports, then configures
+middleware and mounts routers.
+"""
+import os
+
+# ---------------------------------------------------------------------------
+# LangSmith tracing — must be set in os.environ BEFORE langchain imports
+# ---------------------------------------------------------------------------
+from config import settings
+
+if settings.langchain_api_key:
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_API_KEY"] = settings.langchain_api_key
+    os.environ["LANGCHAIN_PROJECT"] = settings.langchain_project or "ARIA_Agent"
+    os.environ["LANGCHAIN_ENDPOINT"] = "https://eu.api.smith.langchain.com"
+    print(f"[LangSmith] Tracing enabled → project: {os.environ['LANGCHAIN_PROJECT']}")
+else:
+    print("[LangSmith] No API key configured — tracing disabled")
+
+# ---------------------------------------------------------------------------
+# FastAPI app
+# ---------------------------------------------------------------------------
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api import routes

@@ -16,7 +16,7 @@ from langchain_core.output_parsers import StrOutputParser
 from pydantic import BaseModel, Field
 
 from agents.state import ResearchState
-from models import get_llm, TIER_HEAVY, TIER_LIGHT
+from models import get_llm, TIER_HEAVY, TIER_LIGHT, get_token_tracker, extract_tokens
 from tools.vector import vector_search
 from tools.search import tavily_search
 
@@ -100,7 +100,7 @@ Scraped Deep-dives:
 {scrape_context}""")
     ])
 
-    return prompt | llm | StrOutputParser()
+    return prompt | llm
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +139,8 @@ async def analyst_node(state: ResearchState) -> dict:
                     "query": query,
                     "chunk": chunk["content"][:2000],
                 })
+                p, c = extract_tokens(grade)
+                get_token_tracker().add(p, c)
                 grades.append(grade)
             except Exception as e:
                 print(f"  [CRAG] Grading failed for chunk: {e}")
@@ -163,6 +165,8 @@ async def analyst_node(state: ResearchState) -> dict:
                     "irrelevant_count": irrelevant_count,
                     "total_count": len(retrieved),
                 })
+                p, c = extract_tokens(rewrite)
+                get_token_tracker().add(p, c)
                 rewritten_query = rewrite.rewritten_query
                 rag_query_rewrites = 1
                 print(f"  [CRAG] Rewritten query: '{rewritten_query}'")
@@ -181,6 +185,8 @@ async def analyst_node(state: ResearchState) -> dict:
                             "query": rewritten_query,
                             "chunk": chunk["content"][:2000],
                         })
+                        p, c = extract_tokens(grade)
+                        get_token_tracker().add(p, c)
                         if grade.relevant:
                             relevant_chunks.append(chunk)
                     except Exception:
@@ -224,12 +230,15 @@ async def analyst_node(state: ResearchState) -> dict:
 
     synthesis_chain = _build_synthesis_chain()
     try:
-        analysis = synthesis_chain.invoke({
+        analysis_msg = synthesis_chain.invoke({
             "query": query,
             "rag_context": rag_context[:15000],
             "search_context": search_context[:15000],
             "scrape_context": scrape_context[:30000],
         })
+        p, c = extract_tokens(analysis_msg)
+        get_token_tracker().add(p, c)
+        analysis = analysis_msg.content
 
         # Update metadata
         metadata = state.get("metadata", {})

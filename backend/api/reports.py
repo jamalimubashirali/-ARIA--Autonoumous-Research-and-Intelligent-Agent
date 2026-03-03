@@ -24,6 +24,7 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 class ReportOut(BaseModel):
     id: str
     query: str
+    title: str | None = None
     domain: str
     content: str
     sources: dict | None = None
@@ -39,7 +40,9 @@ class ReportOut(BaseModel):
 class ReportListItem(BaseModel):
     id: str
     query: str
+    title: str | None = None
     domain: str
+    content: str | None = None
     created_at: str
     rating: int | None = None
 
@@ -126,7 +129,9 @@ async def list_reports(
             ReportListItem(
                 id=str(r.id),
                 query=r.query,
+                title=r.title,
                 domain=r.domain,
+                content=(r.content[:200] if r.content else None),
                 created_at=r.created_at.isoformat(),
                 rating=r.rating,
             )
@@ -165,6 +170,7 @@ async def get_report(
     return ReportOut(
         id=str(report.id),
         query=report.query,
+        title=report.title,
         domain=report.domain,
         content=report.content,
         sources=report.sources,

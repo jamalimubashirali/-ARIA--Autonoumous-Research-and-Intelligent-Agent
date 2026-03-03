@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from agents.state import ResearchState
-from models import get_llm, TIER_HEAVY
+from models import get_llm, TIER_HEAVY, get_token_tracker, extract_tokens
 
 # Domain-specific section templates
 DOMAIN_TEMPLATES = {
@@ -158,8 +158,8 @@ Reviewer Feedback (MUST ADDRESS):
         ])
 
         try:
-            chain = prompt | llm | StrOutputParser()
-            report = chain.invoke({
+            chain = prompt | llm
+            ai_msg = chain.invoke({
                 "domain": domain,
                 "template": template,
                 "query": state["query"],
@@ -168,6 +168,9 @@ Reviewer Feedback (MUST ADDRESS):
                 "previous_report": previous_report[:15000],
                 "feedback": feedback,
             })
+            p, c = extract_tokens(ai_msg)
+            get_token_tracker().add(p, c)
+            report = ai_msg.content
             return {"final_report": report, "writer_iterations": iteration}
         except Exception as e:
             return {"error": f"Writer revision failed: {str(e)}", "writer_iterations": iteration}
@@ -200,16 +203,19 @@ Available Sources for Citation:
 {source_list}""")
         ])
 
-        chain = prompt | llm | StrOutputParser()
+        chain = prompt | llm
 
         try:
-            report = chain.invoke({
+            ai_msg = chain.invoke({
                 "domain": domain,
                 "template": template,
                 "query": state["query"],
                 "analysis": state.get("analysis", "No analysis available."),
                 "source_list": source_list,
             })
+            p, c = extract_tokens(ai_msg)
+            get_token_tracker().add(p, c)
+            report = ai_msg.content
             return {"final_report": report, "writer_iterations": iteration}
         except Exception as e:
             return {"error": f"Writer failed: {str(e)}", "writer_iterations": iteration}

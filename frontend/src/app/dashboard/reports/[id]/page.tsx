@@ -190,8 +190,8 @@ export default function ReportDetailPage() {
       </div>
 
       {/* Document */}
-      <Card className="border-border/40 bg-card/80 backdrop-blur-xl shadow-xl overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
+      <Card className="glow-card gradient-border border-border/30 bg-card/60 backdrop-blur-xl shadow-xl overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-primary/60 via-chart-4/30 to-transparent" />
 
         {/* Document Header */}
         <div className="px-6 sm:px-10 md:px-14 pt-10 pb-6 border-b border-border/20">
@@ -234,7 +234,7 @@ export default function ReportDetailPage() {
       {report.sources &&
         report.sources.items &&
         report.sources.items.length > 0 && (
-          <Card className="border-muted bg-card/60 backdrop-blur-xl shadow-lg mt-8">
+          <Card className="glow-card border-border/30 bg-card/50 backdrop-blur-xl shadow-lg mt-8">
             <CardHeader>
               <CardTitle className="text-xl">Intelligence Sources</CardTitle>
               <CardDescription>

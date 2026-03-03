@@ -51,10 +51,15 @@ async def _search_with_timeout(task: str, timeout: float = 15.0) -> Dict[str, An
         return {"error": f"Search failed for '{task[:50]}': {str(e)[:100]}"}
 
 
+# Semaphore to limit concurrent Firecrawl requests (avoid rate limits)
+_scrape_semaphore = asyncio.Semaphore(4)
+
+
 async def _scrape_with_timeout(url: str, timeout: float = 20.0) -> Dict[str, Any]:
-    """Run a scrape with timeout and retry."""
+    """Run a scrape with timeout, retry, and concurrency control."""
     async def _do():
-        return await asyncio.wait_for(scrape_url(url), timeout=timeout)
+        async with _scrape_semaphore:
+            return await asyncio.wait_for(scrape_url(url), timeout=timeout)
 
     try:
         return await _retry_with_backoff(_do)
@@ -101,14 +106,16 @@ async def researcher_node(state: ResearchState) -> dict:
                 continue
             if "results" in response:
                 all_search_results.extend(response["results"])
-                # Extract top URL from each search response to scrape
-                if response["results"]:
-                    urls_to_scrape.append(response["results"][0].get("url"))
+                # Extract top 2 URLs from each search response to scrape
+                for r in response["results"][:2]:
+                    url = r.get("url")
+                    if url:
+                        urls_to_scrape.append(url)
 
     print(f"  [Researcher] Got {len(all_search_results)} search results, {len(errors)} errors")
 
     # ---- Phase 2: Concurrent scrapes with timeout ----
-    urls_to_scrape = list(set(url for url in urls_to_scrape if url))[:3]
+    urls_to_scrape = list(set(url for url in urls_to_scrape if url))[:8]
 
     if urls_to_scrape:
         print(f"  [Researcher] Scraping {len(urls_to_scrape)} URLs...")
