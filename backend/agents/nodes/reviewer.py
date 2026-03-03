@@ -21,6 +21,7 @@ class ReviewerOutput(BaseModel):
     accuracy_score: int = Field(ge=1, le=5, description="1-5 score for factual accuracy and data support")
     source_attribution_score: int = Field(ge=1, le=5, description="1-5 score for proper source citation")
     verdict: str = Field(description="Either 'approve' or 'reject'")
+    rejection_category: str = Field(default="", description="If rejected: 'formatting' (needs rewrite) or 'missing_facts' (needs more research). Empty if approved.")
     feedback: str = Field(description="Specific actionable feedback if rejected. Empty string if approved.")
 
 
@@ -56,7 +57,8 @@ Score each dimension 1-5:
 Rules for verdict:
 - If the AVERAGE score >= 3.5 → verdict = "approve"
 - If the AVERAGE score < 3.5 → verdict = "reject"
-- If rejecting, provide SPECIFIC, ACTIONABLE feedback that tells the Writer exactly what to fix.
+- If rejecting, provide SPECIFIC, ACTIONABLE feedback that tells the Writer exactly what to fix or the Planner exactly what to search for.
+- Also provide a rejection_category: "missing_facts" if the data itself is incomplete or inaccurate and requires new research, or "formatting" if the data is fine but the writer just did a bad job explaining/formatting it.
 - Do NOT reject for style preferences — only for substantive quality issues.
 - Be fair but rigorous. A score of 3 means "adequate", 4 means "good", 5 means "excellent".
 
@@ -68,6 +70,7 @@ Schema:
   "accuracy_score": int,
   "source_attribution_score": int,
   "verdict": "approve" or "reject",
+  "rejection_category": "formatting" or "missing_facts" or "",
   "feedback": "string"
 }}"""),
         ("user", """Original Query: {query}
@@ -107,25 +110,41 @@ Final Report to Review:
 
         if verdict == "reject":
             print(f"  [Reviewer] Feedback: {review.feedback[:200]}...")
+            print(f"  [Reviewer] Category: {review.rejection_category}")
+
+        # Determine routing target
+        routing_target = "writer"
+        missing_info = []
+        if verdict == "reject" and review.rejection_category == "missing_facts":
+            iterations = state.get("writer_iterations", 1)
+            if iterations < 2:
+                routing_target = "planner"
+                missing_info = [f"Fix missing info: {review.feedback}"]
+                print(f"  [Reviewer] Routing back to PLANNER to research missing facts.")
 
         return {
             "reviewer_decision": {
                 "verdict": verdict,
                 "feedback": review.feedback if verdict == "reject" else "",
+                "rejection_category": review.rejection_category if verdict == "reject" else None,
                 "scores": {
                     "completeness": review.completeness_score,
                     "accuracy": review.accuracy_score,
                     "source_attribution": review.source_attribution_score,
                 },
-            }
+            },
+            "routing_target": routing_target,
+            "missing_information": missing_info
         }
 
     except Exception as e:
-        print(f"  [Reviewer] Failed: {e} — auto-approving")
+        print(f"  [Reviewer] Failed: {e} - auto-approving")
         return {
             "reviewer_decision": {
                 "verdict": "approve",
                 "feedback": "",
+                "rejection_category": None,
                 "scores": {"completeness": 3, "accuracy": 3, "source_attribution": 3},
-            }
+            },
+            "routing_target": "END"
         }

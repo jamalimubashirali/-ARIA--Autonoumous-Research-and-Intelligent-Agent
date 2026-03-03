@@ -1,8 +1,19 @@
 import httpx
-from typing import Dict, Any
+from typing import Dict, Any, List
 from config import settings
+from langchain_core.tools import tool
 
-async def scrape_url(url: str, formats: list = ["markdown"]) -> Dict[str, Any]:
+@tool
+async def scrape_url(url: str, formats: List[str] = ["markdown"]) -> Dict[str, Any]:
+    """Scrape the full content of a specific web page URL.
+    Use this tool ONLY when you need deep, comprehensive information from a specific page, 
+    such as tabular data, detailed articles, or specific reports. 
+    Do NOT use this for general fact-checking unless a search result snippet was insufficient.
+    
+    Args:
+        url: The URL of the webpage to scrape.
+        formats: The formats to extract. Defaults to ["markdown"].
+    """
     if not settings.firecrawl_api_key:
         return {"error": "Firecrawl API key not configured."}
         

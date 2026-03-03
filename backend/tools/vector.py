@@ -138,7 +138,7 @@ async def embed_query(query: str) -> list[float] | None:
 # ---------------------------------------------------------------------------
 async def vector_search(
     query: str,
-    domain: str,
+    domain: str, # We keep domain in signature for compatibility, but don't strictly filter by it
     user_id: uuid.UUID | None = None,
     limit: int = 5,
 ) -> list[dict]:
@@ -156,6 +156,8 @@ async def vector_search(
 
     async with AsyncSessionLocal() as db:
         try:
+            # We remove the strict 'domain = :domain' filter because semantic search
+            # already retrieves the most relevant chunks contextually. 
             result = await db.execute(
                 text("""
                     SELECT
@@ -165,14 +167,12 @@ async def vector_search(
                         domain,
                         1 - (embedding <=> CAST(:qvec AS vector)) AS similarity
                     FROM report_chunks
-                    WHERE domain = :domain
-                      AND embedding IS NOT NULL
+                    WHERE embedding IS NOT NULL
                     ORDER BY embedding <=> CAST(:qvec AS vector)
                     LIMIT :lim
                 """),
                 {
                     "qvec": embedding_str,
-                    "domain": domain,
                     "lim": limit,
                 },
             )
@@ -295,3 +295,49 @@ async def save_report_chunks(
         print(f"[Vector] Committed {saved} chunks to database")
 
     return saved
+
+
+async def search_cached_reports(query_embedding: list[float], domain: str, similarity_threshold: float = 0.85) -> dict | None:
+    """
+    Search strictly the 'reports' table for a highly similar, recent report.
+    Implements TTL. Previously domain-specific, now a flat 30 days for all dynamic topics.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    # Flat 30-day TTL for dynamic topics
+    ttl_days = 30
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=ttl_days)
+
+    async with AsyncSessionLocal() as session:
+        # We find the most similar report that is newer than cutoff_date
+        # Removing domain exact match since topics are dynamically generated now
+        query = text("""
+            SELECT id, title, content, created_at, 
+                   1 - (query_embedding <=> CAST(:embedding AS vector)) AS similarity
+            FROM reports
+            WHERE query_embedding IS NOT NULL
+              AND created_at >= :cutoff
+              AND (1 - (query_embedding <=> CAST(:embedding AS vector))) > :threshold
+            ORDER BY similarity DESC
+            LIMIT 1
+        """)
+        
+        # Need to format the embedding string exactly as a postgres vector literal
+        embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
+
+        result = await session.execute(query, {
+            "embedding": embedding_str,
+            "cutoff": cutoff_date,
+            "threshold": similarity_threshold
+        })
+        
+        row = result.fetchone()
+        if row:
+            return {
+                "id": str(row.id),
+                "title": row.title,
+                "content": row.content,
+                "created_at": row.created_at,
+                "similarity": row.similarity
+            }
+        return None

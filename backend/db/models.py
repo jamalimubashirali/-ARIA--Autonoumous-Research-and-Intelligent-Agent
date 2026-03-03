@@ -65,6 +65,7 @@ class Report(Base):
     title: Mapped[str | None] = mapped_column(String(300), nullable=True)
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    query_embedding: Mapped[list | None] = mapped_column(Vector(2048), nullable=True)
     sources: Mapped[dict | None] = mapped_column(JSONB)
     token_count: Mapped[int | None] = mapped_column(Integer)
     generation_time_ms: Mapped[int | None] = mapped_column(Integer)

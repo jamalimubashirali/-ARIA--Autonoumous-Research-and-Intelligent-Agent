@@ -11,63 +11,6 @@ from langchain_core.output_parsers import StrOutputParser
 from agents.state import ResearchState
 from models import get_llm, TIER_HEAVY, get_token_tracker, extract_tokens
 
-# Domain-specific section templates
-DOMAIN_TEMPLATES = {
-    "sales": """## Executive Summary
-## Company Overview
-## Products & Services
-## Target Market & Positioning
-## Leadership & Key Personnel
-## Recent News & Developments
-## Competitive Landscape
-## Recommended Talking Points""",
-
-    "finance": """## Executive Summary
-## Financial Performance Overview
-## Revenue & Profitability Analysis
-## Balance Sheet & Liquidity
-## Market Position & Valuation
-## Risk Factors
-## Analyst Consensus & Price Targets
-## Investment Thesis""",
-
-    "healthcare": """## Executive Summary
-## Therapeutic Area Overview
-## Mechanism of Action
-## Clinical Trial Data & Results
-## Regulatory Status & Approvals
-## Competitive Landscape
-## Market Opportunity
-## Key Opinion Leader Sentiment""",
-
-    "legal": """## Executive Summary
-## Legal Framework & Statutory Basis
-## Key Provisions & Requirements
-## Relevant Case Law & Precedents
-## Compliance Obligations
-## Enforcement & Penalties
-## Practical Implications
-## Recommended Actions""",
-
-    "sports": """## Executive Summary
-## Background & Context
-## Key Findings & Data Analysis
-## Technology & Methodology Overview
-## Performance Metrics & Evidence
-## Case Studies & Real-World Applications
-## Industry Trends & Future Outlook
-## Strategic Recommendations""",
-
-    "general": """## Executive Summary
-## Background & Context
-## Key Findings
-## Detailed Analysis
-## Evidence & Data Points
-## Industry / Domain Implications
-## Future Outlook & Trends
-## Conclusions & Recommendations""",
-}
-
 
 def _format_sources_for_writer(state: ResearchState) -> str:
     """Extract a numbered source list from search results for the writer to cite."""
@@ -116,12 +59,40 @@ def writer_node(state: ResearchState) -> dict:
     llm = get_llm(tier=TIER_HEAVY, temperature=0.2)
 
     domain = state["domain"]
-    template = DOMAIN_TEMPLATES.get(domain, DOMAIN_TEMPLATES["general"])
     source_list = _format_sources_for_writer(state)
 
     # Check if this is a revision (Reviewer rejected previous version)
     reviewer_decision = state.get("reviewer_decision")
     is_revision = reviewer_decision and reviewer_decision.get("verdict") == "reject"
+
+    if is_revision:
+        template = "Maintain the exact section structure established in the Previous Draft."
+    else:
+        # Dynamically generate the report outline
+        template_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are an expert report structurer. Generate a Markdown outline (headers only) for a professional intelligence report.
+The report is about the topic: {domain}.
+
+Rules:
+- Generate ONLY a list of markdown headers (using ##). 
+- Do NOT generate ANY content under the headers.
+- Include '## Executive Summary' at the top and '## Conclusions & Recommendations' at the end.
+- Create 5-8 headers highly tailored to the specifics of the query and analysis below."""),
+            ("user", "Query: {query}\n\nAnalysis summary: {analysis}")
+        ])
+        try:
+            template_chain = template_prompt | get_llm(temperature=0.1)
+            t_msg = template_chain.invoke({
+                "domain": domain, 
+                "query": state["query"],
+                "analysis": state.get("analysis", "")[:2000]
+            })
+            p, c = extract_tokens(t_msg)
+            get_token_tracker().add(p, c)
+            template = t_msg.content.strip()
+        except Exception as e:
+            print(f"[Writer] Failed to generate dynamic template: {e}")
+            template = "## Executive Summary\n## Background\n## Findings\n## Analysis\n## Conclusions & Recommendations"
 
     if is_revision:
         # Revision prompt — incorporate feedback

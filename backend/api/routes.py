@@ -44,7 +44,24 @@ class ResearchRequest(BaseModel):
     focus_prompt: str = ""
 
 
-VALID_DOMAINS = ["sales", "finance", "healthcare", "legal", "sports"]
+async def _derive_topic(query: str, provided_domain: str) -> str:
+    """Derive a 2-3 word topic classification for the query."""
+    if provided_domain and provided_domain.lower() not in ["general", "none", "", "null"]:
+        # Frontend might still send legacy domains or specific tags
+        return provided_domain
+    
+    from models import get_llm
+    from langchain_core.messages import HumanMessage
+    
+    try:
+        llm = get_llm()
+        prompt = f"Given the research query: '{query}', generate a 2-3 word broad topic classification (e.g., 'Quantum Computing', 'European History', 'Biotech Markets'). Return ONLY the topic string, no quotes or prefix."
+        response = await llm.ainvoke([HumanMessage(content=prompt)])
+        topic = response.content.strip().replace('"', '').replace("'", "").title()
+        return topic[:50]
+    except Exception as e:
+        print(f"Failed to derive topic: {e}")
+        return "General Intelligence"
 
 
 async def _enforce_plan_limit(user: User, db: AsyncSession):
@@ -86,6 +103,8 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
     start_time = time.time()
     final_report = None
     sources = []
+    is_cache_hit = False
+    query_embedding = None
 
     # Reset token tracker for this request
     tracker = get_token_tracker()
@@ -105,7 +124,7 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
                     return
 
                 # Notify UI of node progression
-                if node_name in ["planner", "researcher", "analyst"]:
+                if node_name in ["memory", "planner", "researcher", "analyst"]:
                     event_payload = {
                         "event": "node_complete",
                         "data": {"node": node_name},
@@ -119,9 +138,15 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
                             for r in state_update.get("search_results", [])
                             if r.get("url")
                         ]
+                        
+                    if node_name == "memory":
+                        if "cache_hit" in state_update:
+                            is_cache_hit = state_update["cache_hit"]
+                        if "query_embedding" in state_update:
+                            query_embedding = state_update["query_embedding"]
 
-                # Writer produces final report
-                if node_name == "writer" and "final_report" in state_update:
+                # Memory or Writer produces final report
+                if node_name in ["memory", "writer"] and "final_report" in state_update:
                     final_report = state_update["final_report"]
                     report_payload = {
                         "event": "report",
@@ -147,6 +172,7 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
                 title=_extract_title(final_report, request.query),
                 domain=request.domain,
                 content=final_report,
+                query_embedding=query_embedding,
                 sources={"items": sources} if sources else None,
                 generation_time_ms=elapsed_ms,
                 token_count=tracker.total or None,
@@ -159,16 +185,18 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
             await db.refresh(report)
 
             # Embed report chunks into vector store (background, non-blocking)
-            try:
-                chunks_saved = await save_report_chunks(
-                    report_id=report.id,
-                    user_id=user.id,
-                    domain=request.domain,
-                    report_content=final_report,
-                )
-                print(f"  [Vector] Saved {chunks_saved} report chunks for future RAG")
-            except Exception as vec_err:
-                print(f"  [Vector] Chunk save failed (non-fatal): {vec_err}")
+            # Skip if it is a cache hit to avoid duplicating the same literal text in RAG DB
+            if not is_cache_hit:
+                try:
+                    chunks_saved = await save_report_chunks(
+                        report_id=report.id,
+                        user_id=user.id,
+                        domain=request.domain,
+                        report_content=final_report,
+                    )
+                    print(f"  [Vector] Saved {chunks_saved} report chunks for future RAG")
+                except Exception as vec_err:
+                    print(f"  [Vector] Chunk save failed (non-fatal): {vec_err}")
 
             # Notify frontend of saved report ID
             save_payload = {
@@ -201,11 +229,16 @@ async def run_research(
     if not clerk_id:
         raise HTTPException(status_code=401, detail="UNAUTHORIZED")
 
-    if request.domain not in VALID_DOMAINS:
-        raise HTTPException(status_code=400, detail="INVALID_DOMAIN")
+    # We no longer validate against a strict list of domains
+    # if request.domain not in VALID_DOMAINS:
+    #     raise HTTPException(status_code=400, detail="INVALID_DOMAIN")
 
     if len(request.query) < 10:
         raise HTTPException(status_code=400, detail="QUERY_TOO_SHORT")
+
+    # Quickly derive a dynamic topic if the UI passes "General" or nothing
+    dynamic_topic = await _derive_topic(request.query, request.domain)
+    request.domain = dynamic_topic
 
     # Get user and enforce plan limits
     user = await get_or_create_user(clerk_id, db)

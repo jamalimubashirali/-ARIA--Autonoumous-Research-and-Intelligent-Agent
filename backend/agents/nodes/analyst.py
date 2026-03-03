@@ -33,6 +33,10 @@ class QueryRewrite(BaseModel):
     rewritten_query: str = Field(description="Improved query for better retrieval")
 
 
+class MissingQueries(BaseModel):
+    queries: List[str] = Field(description="2-3 highly specific search queries to find the missing information")
+
+
 # ---------------------------------------------------------------------------
 # Sub-chains
 # ---------------------------------------------------------------------------
@@ -68,6 +72,20 @@ Rewrite the query to be more specific and likely to retrieve relevant informatio
     ])
 
     return prompt | llm.with_structured_output(QueryRewrite)
+
+
+def _build_missing_queries_chain():
+    """Generates specific sub-tasks when previous research failed to find relevant data."""
+    llm = get_llm(tier=TIER_LIGHT, temperature=0.3)
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are a research director. The current research attempts failed to find sufficient relevant information for the user's query.
+Generate 2-3 highly specific, targeted search queries to instruct the Web Researcher agent to find the missing data.
+Focus on extracting the most critical missing concepts."""),
+        ("user", "User Query: {query}\nDomain: {domain}")
+    ])
+    
+    return prompt | llm.with_structured_output(MissingQueries)
 
 
 def _build_synthesis_chain():
@@ -155,7 +173,7 @@ async def analyst_node(state: ResearchState) -> dict:
 
         # ---- Step 3: Rewrite query if >50% irrelevant ----
         if irrelevant_count > len(retrieved) / 2:
-            print("  [CRAG] Step 3: >50% irrelevant — rewriting query...")
+            print("  [CRAG] Step 3: >50% irrelevant - rewriting query...")
             rewrite_chain = _build_rewrite_chain()
 
             try:
@@ -197,9 +215,36 @@ async def analyst_node(state: ResearchState) -> dict:
             except Exception as e:
                 print(f"  [CRAG] Query rewrite failed: {e}")
 
-    # ---- Step 4: Web search fallback if still insufficient ----
+    # ---- Step 4: Check if more research is needed ----
+    research_iterations = state.get("research_iterations", 1)
     if len(relevant_chunks) < 2:
-        print("  [CRAG] Step 4: Insufficient RAG results, triggering web search fallback...")
+        # If we haven't hit the max iterations, trigger backward routing to Researcher
+        if research_iterations < 2:
+            print(f"  [CRAG] Step 4: Insufficient results. Triggering backward loop to Researcher (iteration {research_iterations}/2)...")
+            missing_chain = _build_missing_queries_chain()
+            try:
+                res = missing_chain.invoke({"query": query, "domain": domain})
+                p, c = extract_tokens(res)
+                get_token_tracker().add(p, c)
+                new_queries = res.queries
+                
+                print(f"  [CRAG] Generated {len(new_queries)} new specific sub-tasks for Researcher loop.")
+                
+                sub_tasks = state.get("sub_tasks", [])
+                sub_tasks.extend(new_queries)
+                
+                return {
+                    "sub_tasks": sub_tasks,
+                    "missing_information": new_queries,
+                    "routing_target": "researcher",
+                    "research_iterations": research_iterations + 1
+                }
+            except Exception as e:
+                print(f"  [CRAG] Failed to generate missing queries, falling back to inline search: {e}")
+                # Fallthrough to web_search
+        
+        # Max iterations reached or query generation failed, rely on inline web fallback
+        print("  [CRAG] Step 4: Insufficient results (max iterations reached). Triggering inline web search fallback...")
         rag_web_fallback = True
         try:
             web_results = await tavily_search(query, num_results=5)
@@ -253,6 +298,7 @@ async def analyst_node(state: ResearchState) -> dict:
             "rag_query_rewrites": rag_query_rewrites,
             "rag_web_fallback": rag_web_fallback,
             "metadata": metadata,
+            "routing_target": "writer"
         }
     except Exception as e:
         return {"error": f"Analyst synthesis failed: {str(e)}"}

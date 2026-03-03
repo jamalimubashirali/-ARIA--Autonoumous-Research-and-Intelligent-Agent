@@ -1,9 +1,17 @@
 import httpx
 from typing import List, Dict, Any
 from config import settings
+from langchain_core.tools import tool
 
-async def tavily_search(query: str, num_results: int = 5) -> Dict[str, Any]:
-    """Search the web using Tavily with advanced depth for high-quality results."""
+@tool
+async def tavily_search(query: str, num_results: int = 3) -> Dict[str, Any]:
+    """Search the web for real-time information. 
+    Use this tool first to find recent news, facts, and relevant URLs.
+    
+    Args:
+        query: The search query string to look up.
+        num_results: Max number of search results to return.
+    """
     if not settings.tavily_api_key:
         return {"error": "Tavily API key not configured."}
         

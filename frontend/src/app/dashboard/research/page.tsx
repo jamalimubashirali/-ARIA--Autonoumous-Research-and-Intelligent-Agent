@@ -12,13 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/nextjs";
 import { motion, AnimatePresence, Variants } from "framer-motion";
@@ -43,7 +37,6 @@ type LogEvent = {
 export default function NewResearchPage() {
   const { getToken } = useAuth();
   const [step, setStep] = useState(1);
-  const [domain, setDomain] = useState("");
   const [query, setQuery] = useState("");
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [finalReport, setFinalReport] = useState<string | null>(null);
@@ -76,7 +69,7 @@ export default function NewResearchPage() {
   };
 
   const handleStartResearch = async () => {
-    setStep(3);
+    setStep(2);
     setLogs([]);
     setFinalReport(null);
     setIsError(false);
@@ -103,7 +96,7 @@ export default function NewResearchPage() {
         },
         body: JSON.stringify({
           query,
-          domain,
+          domain: "",
         }),
       });
 
@@ -193,7 +186,7 @@ export default function NewResearchPage() {
                   "Orchestrator",
                   "success",
                 );
-                setStep(4); // Move to results view
+                setStep(3); // Move to results view
               } else if (eventName === "error") {
                 addLog(data.message || "An error occurred.", "System", "error");
                 setIsError(true);
@@ -241,9 +234,9 @@ export default function NewResearchPage() {
 
   return (
     <div
-      className={`mx-auto space-y-8 mt-8 pb-20 transition-all duration-500 ${step === 4 ? "max-w-6xl" : "max-w-4xl"}`}
+      className={`mx-auto space-y-8 mt-8 pb-20 transition-all duration-500 ${step === 3 ? "max-w-6xl" : "max-w-4xl"}`}
     >
-      {step !== 4 && (
+      {step !== 3 && (
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
@@ -274,71 +267,6 @@ export default function NewResearchPage() {
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                     1
                   </div>
-                  <CardTitle className="text-2xl">Select Domain</CardTitle>
-                </div>
-                <CardDescription className="text-base ml-14">
-                  Choose the specialized intelligence domain to guide the
-                  agent's sourcing strategy.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 ml-14">
-                <div className="space-y-3">
-                  <Select value={domain} onValueChange={setDomain}>
-                    <SelectTrigger
-                      id="domain"
-                      className="h-14 bg-background/50 text-base rounded-xl border-muted-foreground/20 hover:border-primary/50 transition-colors"
-                    >
-                      <SelectValue placeholder="Select a targeted domain" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="sales" className="py-3">
-                        Sales & B2B Intelligence
-                      </SelectItem>
-                      <SelectItem value="finance" className="py-3">
-                        Finance & Markets
-                      </SelectItem>
-                      <SelectItem value="healthcare" className="py-3">
-                        Healthcare & Biotech
-                      </SelectItem>
-                      <SelectItem value="legal" className="py-3">
-                        Legal & Compliance
-                      </SelectItem>
-                      <SelectItem value="sports" className="py-3">
-                        Sports & Athletics
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end pt-6 pb-8 px-8 mt-4 bg-muted/5 border-t border-muted/20">
-                <Button
-                  onClick={() => setStep(2)}
-                  disabled={!domain}
-                  size="lg"
-                  className="px-8 rounded-full shadow-md hover:shadow-primary/20 transition-all active:scale-95 text-base h-12"
-                >
-                  Continue to Directives
-                </Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        )}
-
-        {step === 2 && (
-          <motion.div
-            key="step2"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-          >
-            <Card className="border-muted bg-card/60 backdrop-blur-xl shadow-2xl overflow-hidden relative">
-              <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
-              <CardHeader className="pt-8">
-                <div className="flex items-center gap-4 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    2
-                  </div>
                   <CardTitle className="text-2xl">Define Directive</CardTitle>
                 </div>
                 <CardDescription className="text-base ml-14">
@@ -357,15 +285,7 @@ export default function NewResearchPage() {
                   />
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between pt-6 pb-8 px-8 mt-4 bg-muted/5 border-t border-muted/20">
-                <Button
-                  variant="ghost"
-                  onClick={() => setStep(1)}
-                  size="lg"
-                  className="rounded-full h-12 px-6"
-                >
-                  Back
-                </Button>
+              <CardFooter className="flex justify-end pt-6 pb-8 px-8 mt-4 bg-muted/5 border-t border-muted/20">
                 <Button
                   onClick={handleStartResearch}
                   disabled={!query.trim()}
@@ -380,9 +300,9 @@ export default function NewResearchPage() {
           </motion.div>
         )}
 
-        {step === 3 && (
+        {step === 2 && (
           <motion.div
-            key="step3"
+            key="step2"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -482,7 +402,7 @@ export default function NewResearchPage() {
                     variant="outline"
                     size="lg"
                     className="rounded-full"
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(1)}
                   >
                     Review Directives and Retry
                   </Button>
@@ -492,9 +412,9 @@ export default function NewResearchPage() {
           </motion.div>
         )}
 
-        {step === 4 && finalReport && (
+        {step === 3 && finalReport && (
           <motion.div
-            key="step4"
+            key="step3"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -523,7 +443,7 @@ export default function NewResearchPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs font-semibold tracking-wider uppercase text-primary bg-primary/10 px-3 py-1 rounded-full flex items-center">
                     <Sparkles className="w-3 h-3 mr-1" />
-                    {domain}
+                    Generated Insight
                   </span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground leading-tight">
@@ -559,7 +479,6 @@ export default function NewResearchPage() {
                 className="w-full sm:w-auto rounded-full px-8 bg-gradient-to-r from-primary to-primary/80 hover:to-primary/90 shadow-lg hover:shadow-primary/25 transition-all"
                 onClick={() => {
                   setStep(1);
-                  setDomain("");
                   setQuery("");
                   setFinalReport(null);
                 }}

@@ -24,6 +24,13 @@ def planner_node(state: ResearchState) -> dict:
 
     # Pull focus prompt from state if available
     focus_prompt = state.get("focus_prompt") or state.get("metadata", {}).get("focus_prompt", "")
+    
+    # Handle missing information from backward loops
+    missing_info = state.get("missing_information", [])
+    if missing_info:
+        missing_str = "\n".join([f"- {item}" for item in missing_info])
+        missing_context = f"\n\nCRITICAL: The previous report was rejected because it lacked the following information. You MUST create specific sub-tasks to find exactly this data:\n{missing_str}"
+        focus_prompt = (focus_prompt + missing_context) if focus_prompt else missing_context
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", """You are an expert research planner. Given a research query and domain, decompose it into 3-5 highly SPECIFIC web search queries that will find the exact information needed.

@@ -11,6 +11,7 @@ from operator import add
 class ReviewerDecision(TypedDict):
     verdict: str        # "approve" or "reject"
     feedback: str       # Specific feedback if rejected
+    rejection_category: Optional[str] # "formatting", "missing_facts", etc.
     scores: dict        # {completeness, accuracy, source_attribution} 1-5
 
 
@@ -42,6 +43,15 @@ class ResearchState(TypedDict):
     # ---- Reviewer output ----
     reviewer_decision: Optional[ReviewerDecision]
     writer_iterations: int       # Number of Writer → Reviewer loops
+
+    # ---- Bounded Loop Control ----
+    research_iterations: int          # Tracks Analyst → Researcher loops
+    missing_information: List[str]    # Specific facts requested by Analyst/Reviewer
+    routing_target: str               # Explicit target for next node edge (e.g. "researcher", "planner", "writer")
+
+    # ---- Memory output ----
+    cache_hit: Optional[bool]
+    query_embedding: Optional[List[float]]
 
     # ---- Error handling ----
     error: Optional[str]         # Error state

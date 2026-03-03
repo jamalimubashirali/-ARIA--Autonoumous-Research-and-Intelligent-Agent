@@ -1,0 +1,101 @@
+[
+  {
+    "id": "eval-fin-001",
+    "domain": "finance",
+    "query": "What is the expected market growth for solid-state Ev batteries by 2030, and which companies lead the R&D?",
+    "expected_facts": [
+      "Projected market size or CAGR for solid-state batteries by 2030",
+      "Mention of Toyota or QuantumScape as leading R&D efforts"
+    ]
+  },
+  {
+    "id": "eval-fin-002",
+    "domain": "finance",
+    "query": "How did the Federal Reserve's interest rate decisions in late 2023 impact commercial real estate REITs?",
+    "expected_facts": [
+      "Mention of interest rates staying higher for longer in 2023",
+      "Negative impact on commercial real estate valuations",
+      "Increase in borrowing costs for REITs"
+    ]
+  },
+  {
+    "id": "eval-hc-001",
+    "domain": "healthcare",
+    "query": "What are the latest clinical trial results for CRISPR-Cas9 treatments of sickle cell disease as of 2024?",
+    "expected_facts": [
+      "Mention of Casgevy (exa-cel) FDA approval",
+      "Reduction or elimination of severe vaso-occlusive crises",
+      "Mention of Vertex Pharmaceuticals or CRISPR Therapeutics"
+    ]
+  },
+  {
+    "id": "eval-hc-002",
+    "domain": "healthcare",
+    "query": "How is AI currently being used in radiology for early breast cancer detection?",
+    "expected_facts": [
+      "Use of AI for analyzing mammograms",
+      "Reduction of false positives/negatives",
+      "Mention of specific algorithms helping radiologists prioritize cases"
+    ]
+  },
+  {
+    "id": "eval-leg-001",
+    "domain": "legal",
+    "query": "What are the core differences in data subject rights between GDPR and the California Consumer Privacy Act (CCPA)?",
+    "expected_facts": [
+      "GDPR requires opt-in consent (Article 6)",
+      "CCPA relies primarily on opt-out for data sales",
+      "Differences in the definition of personal data"
+    ]
+  },
+  {
+    "id": "eval-leg-002",
+    "domain": "legal",
+    "query": "What is the legal status of right-to-repair legislation for consumer electronics in the US at the federal level?",
+    "expected_facts": [
+      "Mention of the FTC policy on right to repair",
+      "Lack of a comprehensive universal federal law",
+      "Mention of state-level laws (e.g., New York, California) leading the charge"
+    ]
+  },
+  {
+    "id": "eval-sale-001",
+    "domain": "sales",
+    "query": "What are the most effective outbound cold outreach email strategies for B2B SaaS in 2024?",
+    "expected_facts": [
+      "Emphasis on hyper-personalization over volume",
+      "Use of multi-channel points (LinkedIn + Email)",
+      "Keeping emails short and problem-focused"
+    ]
+  },
+  {
+    "id": "eval-sale-002",
+    "domain": "sales",
+    "query": "How do product-led growth (PLG) companies typically structure their sales teams to target enterprise deals?",
+    "expected_facts": [
+      "Product usage data driving sales outreach (PQLs)",
+      "Sales teams acting as consultants/advisors rather than traditional SDRs",
+      "Bridging the gap between self-serve users and enterprise contracts"
+    ]
+  },
+  {
+    "id": "eval-spo-001",
+    "domain": "sports",
+    "query": "Who won the 2024 Australian Open Men's Singles and what was the path to the final?",
+    "expected_facts": [
+      "Jannik Sinner winning the title",
+      "Defeating Daniil Medvedev in the final",
+      "First Grand Slam title for Sinner"
+    ]
+  },
+  {
+    "id": "eval-spo-002",
+    "domain": "sports",
+    "query": "What are the new rule changes in Major League Baseball (MLB) for the 2024 season compared to 2023?",
+    "expected_facts": [
+      "Reduction of the pitch clock with runners on base (from 20 to 18 seconds)",
+      "Reduction of mound visits",
+      "Changes to the runner's lane to first base"
+    ]
+  }
+]
