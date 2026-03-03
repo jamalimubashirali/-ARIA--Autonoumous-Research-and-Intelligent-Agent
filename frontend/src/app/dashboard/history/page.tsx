@@ -26,6 +26,7 @@ import Link from "next/link";
 interface Report {
   id: string;
   query: string;
+  title: string | null;
   domain: string;
   created_at: string;
   rating?: number;
@@ -132,7 +133,7 @@ export default function HistoryPage() {
                     </div>
                   </div>
                   <CardTitle className="text-lg line-clamp-2 leading-tight">
-                    {report.query}
+                    {report.title || report.query.split(".")[0]}
                   </CardTitle>
                 </CardHeader>
                 <CardFooter className="mt-auto relative pt-4 border-t border-muted/30 flex justify-end">

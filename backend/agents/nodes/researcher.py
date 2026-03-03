@@ -135,11 +135,21 @@ async def researcher_node(state: ResearchState) -> dict:
     metadata["researcher_errors"] = errors
     metadata["researcher_elapsed_s"] = round(elapsed, 2)
 
-    print(f"  [Researcher] Done in {elapsed:.1f}s — {len(all_search_results)} results, {len(scraped_contents)} scrapes")
+    # Collect deduplicated sources for citation by the Writer
+    seen_urls = set()
+    sources = []
+    for r in all_search_results:
+        url = r.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            sources.append({"title": r.get("title", "Untitled"), "url": url})
+
+    print(f"  [Researcher] Done in {elapsed:.1f}s — {len(all_search_results)} results, {len(scraped_contents)} scrapes, {len(sources)} unique sources")
 
     result = {
         "search_results": all_search_results,
         "scraped_content": scraped_contents,
+        "sources": sources,
         "metadata": metadata,
     }
 

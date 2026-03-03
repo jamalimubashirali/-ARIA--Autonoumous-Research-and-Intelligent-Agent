@@ -58,7 +58,18 @@ Rules for verdict:
 - If the AVERAGE score < 3.5 → verdict = "reject"
 - If rejecting, provide SPECIFIC, ACTIONABLE feedback that tells the Writer exactly what to fix.
 - Do NOT reject for style preferences — only for substantive quality issues.
-- Be fair but rigorous. A score of 3 means "adequate", 4 means "good", 5 means "excellent"."""),
+- Be fair but rigorous. A score of 3 means "adequate", 4 means "good", 5 means "excellent".
+
+You MUST return your answer as a raw JSON object matching this schema exactly.
+Do not include markdown blocks like ```json or any other text.
+Schema:
+{{
+  "completeness_score": int,
+  "accuracy_score": int,
+  "source_attribution_score": int,
+  "verdict": "approve" or "reject",
+  "feedback": "string"
+}}"""),
         ("user", """Original Query: {query}
 Domain: {domain}
 
@@ -69,7 +80,7 @@ Final Report to Review:
 {report}""")
     ])
 
-    chain = prompt | llm.with_structured_output(ReviewerOutput)
+    chain = prompt | llm.with_structured_output(ReviewerOutput, method="json_mode")
 
     try:
         review = chain.invoke({

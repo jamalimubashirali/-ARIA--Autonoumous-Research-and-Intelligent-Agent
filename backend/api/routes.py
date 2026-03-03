@@ -4,7 +4,9 @@ Research endpoint for ARIA.
 POST /api/v1/research — Initiates the agent pipeline, streams progress via SSE,
 and persists the final report to the database.
 """
+import asyncio
 import json
+import re
 import time
 
 from fastapi import APIRouter, HTTPException, Request, Depends
@@ -17,6 +19,20 @@ from db.session import get_db
 from db.models import Report, User
 from api.reports import get_or_create_user
 from api.users import PLAN_LIMITS
+from tools.vector import save_report_chunks
+
+
+def _extract_title(report_content: str, fallback_query: str) -> str:
+    """Extract a clean title from the report's first markdown heading."""
+    match = re.search(r'^#{1,2}\s+(.+)', report_content, re.MULTILINE)
+    if match:
+        title = match.group(1).strip()
+        # Remove bold markers
+        title = re.sub(r'\*+', '', title).strip()
+        return title[:300]
+    # Fallback: first sentence of the query
+    first_sentence = fallback_query.split('.')[0].strip()
+    return first_sentence[:300] if first_sentence else fallback_query[:300]
 
 router = APIRouter()
 
@@ -58,9 +74,11 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
     initial_state = {
         "query": request.query,
         "domain": request.domain,
+        "focus_prompt": request.focus_prompt or "",
         "sub_tasks": [],
         "search_results": [],
         "scraped_content": [],
+        "sources": [],
         "metadata": {"source": "api_request", "focus_prompt": request.focus_prompt},
     }
 
@@ -121,6 +139,7 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
             report = Report(
                 user_id=user.id,
                 query=request.query,
+                title=_extract_title(final_report, request.query),
                 domain=request.domain,
                 content=final_report,
                 sources={"items": sources} if sources else None,
@@ -131,6 +150,19 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
             # Increment user's monthly counter
             user.reports_this_month += 1
             await db.commit()
+            await db.refresh(report)
+
+            # Embed report chunks into vector store (background, non-blocking)
+            try:
+                chunks_saved = await save_report_chunks(
+                    report_id=report.id,
+                    user_id=user.id,
+                    domain=request.domain,
+                    report_content=final_report,
+                )
+                print(f"  [Vector] Saved {chunks_saved} report chunks for future RAG")
+            except Exception as vec_err:
+                print(f"  [Vector] Chunk save failed (non-fatal): {vec_err}")
 
             # Notify frontend of saved report ID
             save_payload = {

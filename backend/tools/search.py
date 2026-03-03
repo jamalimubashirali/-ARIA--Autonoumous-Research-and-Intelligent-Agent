@@ -2,7 +2,8 @@ import httpx
 from typing import List, Dict, Any
 from config import settings
 
-async def tavily_search(query: str, num_results: int = 3) -> Dict[str, Any]:
+async def tavily_search(query: str, num_results: int = 5) -> Dict[str, Any]:
+    """Search the web using Tavily with advanced depth for high-quality results."""
     if not settings.tavily_api_key:
         return {"error": "Tavily API key not configured."}
         
@@ -13,14 +14,15 @@ async def tavily_search(query: str, num_results: int = 3) -> Dict[str, Any]:
     }
     payload = {
         "query": query,
-        "search_depth": "basic",
+        "search_depth": "advanced",
         "include_answer": False,
-        "max_results": num_results
+        "include_raw_content": False,
+        "max_results": num_results,
     }
     
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(url, json=payload, headers=headers, timeout=10.0)
+            response = await client.post(url, json=payload, headers=headers, timeout=20.0)
             response.raise_for_status()
             data = response.json()
             return {"results": data.get("results", [])}

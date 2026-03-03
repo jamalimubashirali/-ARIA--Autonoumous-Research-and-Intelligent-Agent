@@ -22,26 +22,33 @@ def planner_node(state: ResearchState) -> dict:
 
     llm = get_llm(tier=TIER_LIGHT, temperature=0)
 
+    # Pull focus prompt from state if available
+    focus_prompt = state.get("focus_prompt") or state.get("metadata", {}).get("focus_prompt", "")
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are an expert research planner. Given a research query and domain, decompose it into 3-5 specific search sub-tasks that together will produce a comprehensive intelligence report.
+        ("system", """You are an expert research planner. Given a research query and domain, decompose it into 3-5 highly SPECIFIC web search queries that will find the exact information needed.
 
 Rules:
-(1) Each sub-task should target a different information source or angle.
-(2) Order tasks from broad to specific.
-(3) Consider the domain when prioritising angles:
-    - sales: company overview, financials, products, leadership, recent news
-    - finance: financial statements, market data, analyst consensus, risk factors
-    - healthcare: clinical data, regulatory status, mechanism of action, competitive landscape
-    - legal: statute text, case law, regulatory guidance, compliance requirements
-    - sports: performance stats, injury history, contract details, scouting assessment
-(4) Output ONLY a JSON array of strings."""),
-        ("user", "Domain: {domain}\nQuery: {query}")
+(1) Each sub-task must be a concrete, detailed search query — NOT a vague topic.
+    BAD:  "injury prevention in sports"
+    GOOD: "AI wearable sensor data injury prediction Premier League NBA 2024 2025"
+(2) Incorporate key terms and entities directly from the user's query into each sub-task.
+(3) Order tasks from broad context to specific data points.
+(4) If the user provided a focus prompt, weight sub-tasks toward that angle.
+(5) Include at least one sub-task targeting academic/research sources (e.g., "site:pubmed.ncbi.nlm.nih.gov" or "journal" or "study").
+(6) Include at least one sub-task targeting recent news or case studies.
+(7) Output ONLY a JSON array of strings."""),
+        ("user", "Domain: {domain}\nQuery: {query}\nFocus: {focus_prompt}")
     ])
 
     chain = prompt | llm.with_structured_output(PlannerOutput)
 
     try:
-        result = chain.invoke({"domain": state["domain"], "query": state["query"]})
+        result = chain.invoke({
+            "domain": state["domain"],
+            "query": state["query"],
+            "focus_prompt": focus_prompt or "No specific focus — cover all angles.",
+        })
         return {"sub_tasks": result.sub_tasks}
     except Exception as e:
         print(f"Planner structured output failed, trying raw parse: {e}")
@@ -49,7 +56,11 @@ Rules:
         try:
             import json
             raw_chain = prompt | llm
-            raw_result = raw_chain.invoke({"domain": state["domain"], "query": state["query"]})
+            raw_result = raw_chain.invoke({
+                "domain": state["domain"],
+                "query": state["query"],
+                "focus_prompt": focus_prompt or "No specific focus — cover all angles.",
+            })
             content = raw_result.content
             # Try to extract JSON array from response
             start = content.find("[")

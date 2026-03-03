@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/api";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import NotionMarkdown from "@/components/notion-markdown";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +28,7 @@ import {
 interface ReportDetail {
   id: string;
   query: string;
+  title: string | null;
   domain: string;
   content: string;
   sources: { items: { title: string; url: string }[] } | null;
@@ -189,20 +189,28 @@ export default function ReportDetailPage() {
         </div>
       </div>
 
-      {/* Title Card */}
-      <Card className="border-primary/20 bg-card/60 backdrop-blur-xl shadow-xl overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
-        <CardHeader className="pb-6">
+      {/* Document */}
+      <Card className="border-border/40 bg-card/80 backdrop-blur-xl shadow-xl overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
+
+        {/* Document Header */}
+        <div className="px-6 sm:px-10 md:px-14 pt-10 pb-6 border-b border-border/20">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xs font-semibold tracking-wider uppercase text-primary bg-primary/10 px-3 py-1 rounded-full flex items-center">
               <Sparkles className="w-3 h-3 mr-1" />
               {report.domain}
             </span>
           </div>
-          <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
-            {report.query}
-          </CardTitle>
-          <div className="flex flex-wrap items-center gap-4 mt-6 text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight tracking-tight text-foreground">
+            {report.title ||
+              (() => {
+                const match = report.content.match(/^##?\s+(.+)/m);
+                return match
+                  ? match[1].replace(/\*+/g, "").trim()
+                  : report.query.split(".")[0];
+              })()}
+          </h1>
+          <div className="flex flex-wrap items-center gap-4 mt-5 text-sm text-muted-foreground">
             <div className="flex items-center">
               <Calendar className="w-4 h-4 mr-2" />
               {format(new Date(report.created_at), "MMMM d, yyyy 'at' h:mm a")}
@@ -214,15 +222,11 @@ export default function ReportDetailPage() {
               </div>
             )}
           </div>
-        </CardHeader>
-      </Card>
+        </div>
 
-      {/* Main Content */}
-      <Card className="border-muted bg-card/60 backdrop-blur-xl shadow-lg">
-        <CardContent className="p-6 sm:p-10 prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-primary">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {report.content}
-          </ReactMarkdown>
+        {/* Document Body */}
+        <CardContent className="px-6 sm:px-10 md:px-14 py-8 md:py-10">
+          <NotionMarkdown content={report.content} />
         </CardContent>
       </Card>
 

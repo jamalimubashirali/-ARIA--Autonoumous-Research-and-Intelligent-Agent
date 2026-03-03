@@ -62,6 +62,7 @@ class Report(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
     query: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(300), nullable=True)
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     sources: Mapped[dict | None] = mapped_column(JSONB)
@@ -105,7 +106,7 @@ class ReportChunk(Base):
     )
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list] = mapped_column(Vector(1024), nullable=True)  # Cohere embed-v3 = 1024 dims
+    embedding: Mapped[list] = mapped_column(Vector(2048), nullable=True)  # nvidia/llama-nemotron-embed = 2048 dims
     chunk_index: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

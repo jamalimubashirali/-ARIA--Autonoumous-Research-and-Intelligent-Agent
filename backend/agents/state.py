@@ -17,7 +17,8 @@ class ReviewerDecision(TypedDict):
 class ResearchState(TypedDict):
     # ---- Input ----
     query: str                   # Raw user query
-    domain: str                  # sales|finance|healthcare|legal|sports
+    domain: str                  # sales|finance|healthcare|legal|sports|general
+    focus_prompt: str            # Optional user-supplied focus/angle for the research
 
     # ---- Planner output ----
     sub_tasks: List[str]         # Decomposed search sub-tasks
@@ -25,6 +26,7 @@ class ResearchState(TypedDict):
     # ---- Researcher output ----
     search_results: List[dict]   # Tavily results
     scraped_content: List[str]   # Firecrawl output
+    sources: List[dict]          # [{title, url}] collected from search for citation
 
     # ---- Corrective RAG (Analyst) ----
     rag_context: str             # Retrieved vector chunks (graded-relevant only)

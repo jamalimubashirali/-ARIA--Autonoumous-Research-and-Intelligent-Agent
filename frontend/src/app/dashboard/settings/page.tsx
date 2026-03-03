@@ -43,14 +43,7 @@ export default async function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                // In a real implementation, redirect to Clerk user profile or use Clerk's <UserProfile />
-              }}
-            >
-              Manage Account via Clerk
-            </Button>
+            <Button variant="outline">Manage Account via Clerk</Button>
           </CardFooter>
         </Card>
 
