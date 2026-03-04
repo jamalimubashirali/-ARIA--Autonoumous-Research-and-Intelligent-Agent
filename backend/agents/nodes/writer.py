@@ -78,7 +78,8 @@ Rules:
 - Do NOT generate ANY content under the headers.
 - MUST start with a single H1 header (`#`) containing a highly specific, compelling, and descriptive title for the report based on the analysis.
 - Include '## Executive Summary' as the second header and '## Conclusions & Recommendations' at the end.
-- Create 5-8 H2 headers (`##`) highly tailored to the specifics of the query and analysis below."""),
+- Create 6-10 H2 headers (`##`) highly tailored to the specifics of the query and analysis below, allowing for an exhaustive and deeply detailed report.
+- Include H3 subheaders (`###`) where appropriate to organize granular details, frameworks, and methodologies found in the analysis."""),
             ("user", "Query: {query}\n\nAnalysis summary: {analysis}")
         ])
         try:
@@ -86,7 +87,7 @@ Rules:
             t_msg = template_chain.invoke({
                 "domain": domain, 
                 "query": state["query"],
-                "analysis": state.get("analysis", "")[:2000]
+                "analysis": state.get("analysis", "")[:10000]
             })
             p, c = extract_tokens(t_msg)
             get_token_tracker().add(p, c)
@@ -111,6 +112,7 @@ REVISION INSTRUCTIONS:
 - Address EVERY point raised in the feedback.
 - Keep the parts that were good; only improve what was criticized.
 - Maintain the same structure and formatting.
+- Be exhaustive, highly detailed, and comprehensive. Weave in all frameworks, methodologies, specific metrics, named quotes, and actionable insights detailed in the analysis. Do not leave out crucial depth.
 - CRITICAL: You MUST cite sources inline using the format [Source: Title](URL).
 - Use the numbered source list provided to add proper citations.
 - Output clean Markdown only."""),
@@ -137,7 +139,7 @@ Reviewer Feedback (MUST ADDRESS):
                 "query": state["query"],
                 "analysis": state.get("analysis", "No analysis available."),
                 "source_list": source_list,
-                "previous_report": previous_report[:15000],
+                "previous_report": previous_report[:50000],
                 "feedback": feedback,
             })
             p, c = extract_tokens(ai_msg)
@@ -156,13 +158,14 @@ You MUST use the following section structure for a {domain} report:
 {template}
 
 Rules:
-- Be specific and data-driven — cite numbers, dates, and percentages where available.
-- Each section should contain substantive content, not filler.
+- Be exhaustive, highly detailed, and comprehensive.
+- Weave in all frameworks, methodologies, specific metrics, named quotes, and actionable insights detailed in the analysis. Do not leave out crucial depth.
+- Each section should contain substantive, long-form content, not filler or brief summaries. Explain concepts and findings deeply.
 - CRITICAL: You MUST cite your sources inline throughout the report.
   Use this format: [Source: Title](URL)
   Example: According to a recent study [Source: Wearable Tech in Sports](https://example.com/study), injury rates decreased by 30%.
 - Use the numbered source list provided to find the correct URLs for citations.
-- Every major claim or data point MUST have a source citation.
+- Every major claim, framework, or data point MUST have a source citation.
 - Use Markdown formatting: headers, bullet points, bold for emphasis.
 - Output clean Markdown only, no preamble or concluding remarks.
 - If data for a section is unavailable, write "Insufficient data available for this section." """),

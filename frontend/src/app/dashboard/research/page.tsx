@@ -459,7 +459,11 @@ export default function NewResearchPage() {
 
               {/* Document Body */}
               <CardContent className="px-6 sm:px-10 md:px-14 py-8 md:py-10">
-                <NotionMarkdown content={finalReport} />
+                <NotionMarkdown
+                  content={finalReport
+                    .replace(/^##?\s+.*?(?:\n|$)/m, "")
+                    .trim()}
+                />
               </CardContent>
             </Card>
 

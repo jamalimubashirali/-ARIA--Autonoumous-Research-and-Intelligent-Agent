@@ -90,6 +90,24 @@ Focus on extracting the most critical missing concepts."""),
     return base_chain
 
 
+def _build_extractor_chain():
+    """Extracts high-value, specific details from raw source content to prevent context overflow."""
+    llm = get_llm(tier=TIER_LIGHT, temperature=0.1)
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are an expert research extraction engine. Your job is to extract the most critical facts, frameworks, metrics, and nuanced insights from the provided source document that are highly relevant to the user's overall query.
+
+Rules:
+- MUST retain the Source URL at the very top of your output.
+- Preserve exact numbers, dates, and direct quotes where valuable.
+- Extract complete names of frameworks or methodologies, along with their definitions.
+- Write in detailed bullet points or short paragraphs.
+- Do NOT write a high-level, generic summary. We need granular depth.
+- If the document contains absolutely nothing relevant to the query, output ONLY 'NO_RELEVANT_INFO'."""),
+        ("user", "Query: {query}\n\nSource Content:\n{document}")
+    ])
+    return prompt | llm
+
+
 
 def _build_synthesis_chain():
     """Synthesize relevant chunks + search data into analysis."""
@@ -108,7 +126,9 @@ Rules:
 - Flag any contradictions between sources.
 - Note the recency and reliability of each data point.
 - Prioritize historical context where it is recent and relevant.
-- Be thorough — the Writer node depends entirely on your analysis."""),
+- Extensively incorporate rich details, frameworks, methodologies, and actionable insights found within the scraped content.
+- Do NOT merely summarize heavily; retain the depth, nuance, and specific examples provided in the source material (e.g., specific metrics, named frameworks, quotes, or deep-dive details).
+- Be extremely thorough — the Writer node depends entirely on your analysis to write the final rich report. Do not leave out valuable information."""),
         ("user", """Query: {query}
 
 Historical Context (RAG):
@@ -154,21 +174,27 @@ async def analyst_node(state: ResearchState) -> dict:
         grading_chain = _build_grading_chain()
 
         # Semaphore limits concurrent LLM calls to avoid rate limit bursts
-        grade_sem = asyncio.Semaphore(3)
+        # Set to 1 to prioritize quality/stability over quickness and avoid 429s on free/S0 tiers.
+        grade_sem = asyncio.Semaphore(1)
 
         async def _grade_chunk(chunk, q):
             async with grade_sem:
-                try:
-                    grade = await grading_chain.ainvoke({
-                        "query": q,
-                        "chunk": chunk["content"][:2000],
-                    })
-                    p, c = extract_tokens(grade)
-                    get_token_tracker().add(p, c)
-                    return grade
-                except Exception as e:
-                    print(f"  [CRAG] Grading failed for chunk: {e}")
-                    return ChunkGrade(relevant=True, reason="Grading failed, assumed relevant")
+                for attempt in range(3):
+                    try:
+                        grade = await grading_chain.ainvoke({
+                            "query": q,
+                            "chunk": chunk["content"][:2000],
+                        })
+                        p, c = extract_tokens(grade)
+                        get_token_tracker().add(p, c)
+                        return grade
+                    except Exception as e:
+                        if attempt == 2:
+                            print(f"  [CRAG] Grading failed permanently for chunk: {e}")
+                            return ChunkGrade(relevant=True, reason="Grading failed, assumed relevant")
+                        delay = 2 * (attempt + 1)
+                        print(f"  [CRAG] Grading rate limit/error (attempt {attempt+1}): {e}. Retrying in {delay}s...")
+                        await asyncio.sleep(delay)
 
         grades = await asyncio.gather(*[_grade_chunk(chunk, query) for chunk in retrieved])
 
@@ -282,6 +308,43 @@ async def analyst_node(state: ResearchState) -> dict:
         except Exception as e:
             print(f"  [CRAG] Web fallback failed: {e}")
 
+    # ---- Step 4.5: Context Compression / Map-Reduce Extraction ----
+    scraped_content_list = state.get("scraped_content", [])
+    extracted_scrapes = []
+
+    if scraped_content_list:
+        print(f"  [CRAG] Step 4.5: Extracting high-value signal from {len(scraped_content_list)} raw sources...")
+        extractor_chain = _build_extractor_chain()
+        # Set to 1 to prioritize quality/stability over quickness and avoid 429s.
+        ext_sem = asyncio.Semaphore(1)
+        
+        async def _extract_doc(doc_text):
+            async with ext_sem:
+                for attempt in range(3):
+                    try:
+                        # chunk to max ~35k chars to prevent light model overflow
+                        res = await extractor_chain.ainvoke({
+                            "query": query,
+                            "document": doc_text[:35000]
+                        })
+                        p, c = extract_tokens(res)
+                        get_token_tracker().add(p, c)
+                        return res.content
+                    except Exception as e:
+                        if attempt == 2:
+                            print(f"  [CRAG] Extractor failed permanently: {e}")
+                            # fallback to basic truncation
+                            return doc_text[:3000]
+                        delay = 2 * (attempt + 1)
+                        print(f"  [CRAG] Extractor rate limit/error (attempt {attempt+1}): {e}. Retrying in {delay}s...")
+                        await asyncio.sleep(delay)
+                    
+        extracted_results = await asyncio.gather(*[_extract_doc(doc) for doc in scraped_content_list])
+        
+        for extracted in extracted_results:
+            if "NO_RELEVANT_INFO" not in extracted:
+                extracted_scrapes.append(extracted)
+
     # ---- Step 5: Synthesize ----
     print("  [CRAG] Step 5: Synthesizing analysis...")
 
@@ -297,15 +360,15 @@ async def analyst_node(state: ResearchState) -> dict:
         for res in state.get("search_results", [])
     ])
 
-    scrape_context = "\n---\n".join(state.get("scraped_content", []))
+    scrape_context = "\n---\n".join(extracted_scrapes)
 
     synthesis_chain = _build_synthesis_chain()
     try:
         analysis_msg = synthesis_chain.invoke({
             "query": query,
-            "rag_context": rag_context[:15000],
-            "search_context": search_context[:15000],
-            "scrape_context": scrape_context[:30000],
+            "rag_context": rag_context[:30000],
+            "search_context": search_context[:30000],
+            "scrape_context": scrape_context[:100000],
         })
         p, c = extract_tokens(analysis_msg)
         get_token_tracker().add(p, c)

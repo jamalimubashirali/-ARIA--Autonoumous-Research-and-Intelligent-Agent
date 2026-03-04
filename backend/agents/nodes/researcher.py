@@ -4,7 +4,6 @@ from typing import Dict, Any, List
 
 from agents.state import ResearchState
 from tools.search import tavily_search
-from tools.scraper import scrape_url
 from models import get_llm, TIER_HEAVY, get_token_tracker
 
 
@@ -49,17 +48,13 @@ async def researcher_node(state: ResearchState) -> dict:
                         if len(best_urls) < 1:
                             best_urls.append((url, r))  # carry the result too for fallback
                             
-                # 2. Scrape the best URLs (Firecrawl preferred, Tavily raw_content as fallback)
+                # 2. Extract content from the best URLs using Tavily's raw_content
                 task_scrapes = []
                 for url, search_result in best_urls:
-                    scrape_data = await scrape_url.ainvoke({"url": url})
-                    if "error" not in scrape_data and scrape_data.get("content"):
-                        task_scrapes.append(f"Source URL: {url}\n\nContent:\n{scrape_data.get('content', '')}")
-                    else:
-                        # Firecrawl unavailable/failed — use Tavily raw_content as fallback
-                        raw = search_result.get("raw_content") or search_result.get("content", "")
-                        if raw:
-                            task_scrapes.append(f"Source URL: {url}\n\nContent (Tavily):\n{str(raw)[:5000]}")
+                    raw = search_result.get("raw_content") or search_result.get("content", "")
+                    if raw:
+                        # Pass the full raw content to the analyst node for LLM extraction
+                        task_scrapes.append(f"Source URL: {url}\n\nContent:\n{str(raw)}")
                         
                 scraped_contents.extend(task_scrapes)
                 return True
