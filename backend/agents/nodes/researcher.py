@@ -47,14 +47,19 @@ async def researcher_node(state: ResearchState) -> dict:
                         sources.append({"title": r.get("title", "Untitled"), "url": url})
                         # Grabbing top 1 link to scrape per sub-task to avoid overload
                         if len(best_urls) < 1:
-                            best_urls.append(url)
+                            best_urls.append((url, r))  # carry the result too for fallback
                             
-                # 2. Scrape the best URLs
+                # 2. Scrape the best URLs (Firecrawl preferred, Tavily raw_content as fallback)
                 task_scrapes = []
-                for url in best_urls:
+                for url, search_result in best_urls:
                     scrape_data = await scrape_url.ainvoke({"url": url})
-                    if "error" not in scrape_data:
+                    if "error" not in scrape_data and scrape_data.get("content"):
                         task_scrapes.append(f"Source URL: {url}\n\nContent:\n{scrape_data.get('content', '')}")
+                    else:
+                        # Firecrawl unavailable/failed — use Tavily raw_content as fallback
+                        raw = search_result.get("raw_content") or search_result.get("content", "")
+                        if raw:
+                            task_scrapes.append(f"Source URL: {url}\n\nContent (Tavily):\n{str(raw)[:5000]}")
                         
                 scraped_contents.extend(task_scrapes)
                 return True

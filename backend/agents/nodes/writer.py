@@ -74,10 +74,11 @@ def writer_node(state: ResearchState) -> dict:
 The report is about the topic: {domain}.
 
 Rules:
-- Generate ONLY a list of markdown headers (using ##). 
+- Generate ONLY a list of markdown headers. 
 - Do NOT generate ANY content under the headers.
-- Include '## Executive Summary' at the top and '## Conclusions & Recommendations' at the end.
-- Create 5-8 headers highly tailored to the specifics of the query and analysis below."""),
+- MUST start with a single H1 header (`#`) containing a highly specific, compelling, and descriptive title for the report based on the analysis.
+- Include '## Executive Summary' as the second header and '## Conclusions & Recommendations' at the end.
+- Create 5-8 H2 headers (`##`) highly tailored to the specifics of the query and analysis below."""),
             ("user", "Query: {query}\n\nAnalysis summary: {analysis}")
         ])
         try:
@@ -92,7 +93,7 @@ Rules:
             template = t_msg.content.strip()
         except Exception as e:
             print(f"[Writer] Failed to generate dynamic template: {e}")
-            template = "## Executive Summary\n## Background\n## Findings\n## Analysis\n## Conclusions & Recommendations"
+            template = "# Intelligence Report\n## Executive Summary\n## Background\n## Findings\n## Analysis\n## Conclusions & Recommendations"
 
     if is_revision:
         # Revision prompt — incorporate feedback

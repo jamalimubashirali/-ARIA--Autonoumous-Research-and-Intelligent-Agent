@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     openrouter_embedding_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_api_key: str = ""      # Your OpenRouter API Key
     openrouter_embedding_model: str = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
-    embedding_dimensions: int = 2048
+    embedding_dimensions: int = 2048   # Native output with content-array input format
 
     # ==== Database (Supabase PostgreSQL) ====
     db_host: str = "aws-1-ap-south-1.pooler.supabase.com"

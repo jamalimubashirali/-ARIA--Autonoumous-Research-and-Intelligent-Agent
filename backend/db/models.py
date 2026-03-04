@@ -107,7 +107,7 @@ class ReportChunk(Base):
     )
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list] = mapped_column(Vector(2048), nullable=True)  # nvidia/llama-nemotron-embed = 2048 dims
+    embedding: Mapped[list] = mapped_column(Vector(2048), nullable=True)  # nvidia/llama-nemotron-embed-vl-1b-v2 native = 2048 dims
     chunk_index: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

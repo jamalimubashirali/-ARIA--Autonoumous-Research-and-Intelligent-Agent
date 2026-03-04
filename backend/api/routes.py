@@ -25,12 +25,21 @@ from models import get_token_tracker
 
 def _extract_title(report_content: str, fallback_query: str) -> str:
     """Extract a clean title from the report's first markdown heading."""
-    match = re.search(r'^#{1,2}\s+(.+)', report_content, re.MULTILINE)
-    if match:
-        title = match.group(1).strip()
+    # Find all headers (H1 to H3)
+    matches = re.findall(r'^#{1,3}\s+(.+)', report_content, re.MULTILINE)
+    
+    generic_titles = {
+        "executive summary", "introduction", "overview", "summary", 
+        "background", "findings", "analysis", "report", "conclusion", 
+        "conclusions & recommendations", "intelligence report"
+    }
+    
+    for title in matches:
         # Remove bold markers
-        title = re.sub(r'\*+', '', title).strip()
-        return title[:300]
+        clean_title = re.sub(r'\*+', '', title).strip()
+        if clean_title.lower() not in generic_titles:
+            return clean_title[:300]
+
     # Fallback: first sentence of the query
     first_sentence = fallback_query.split('.')[0].strip()
     return first_sentence[:300] if first_sentence else fallback_query[:300]
@@ -114,14 +123,25 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
         async for output in research_graph.astream(initial_state):
             for node_name, state_update in output.items():
 
-                # Handle errors from any node
-                if "error" in state_update and state_update["error"]:
-                    error_payload = {
-                        "event": "error",
-                        "data": {"message": state_update["error"]},
-                    }
-                    yield f"data: {json.dumps(error_payload)}\n\n"
-                    return
+                # Handle errors from critical nodes only — researcher errors are recoverable
+                # and must NOT abort the stream before the report is saved.
+                if "error" in state_update and state_update["error"] and not final_report:
+                    # Only fatal if it's an unrecoverable node (writer/planner/analyst fully failed)
+                    is_fatal = node_name in ("writer", "planner", "analyst") and not state_update.get("final_report")
+                    if is_fatal:
+                        error_payload = {
+                            "event": "error",
+                            "data": {"message": state_update["error"]},
+                        }
+                        yield f"data: {json.dumps(error_payload)}\n\n"
+                        return
+                    else:
+                        # Non-fatal (e.g. researcher) — log as warning event but keep going
+                        warn_payload = {
+                            "event": "warning",
+                            "data": {"message": state_update["error"]},
+                        }
+                        yield f"data: {json.dumps(warn_payload)}\n\n"
 
                 # Notify UI of node progression
                 if node_name in ["memory", "planner", "researcher", "analyst"]:
@@ -143,7 +163,7 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
                         if "cache_hit" in state_update:
                             is_cache_hit = state_update["cache_hit"]
                         if "query_embedding" in state_update:
-                            query_embedding = state_update["query_embedding"]
+                            query_embedding = state_update["query_embedding"] if state_update["query_embedding"] else None
 
                 # Memory or Writer produces final report
                 if node_name in ["memory", "writer"] and "final_report" in state_update:
@@ -172,7 +192,7 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
                 title=_extract_title(final_report, request.query),
                 domain=request.domain,
                 content=final_report,
-                query_embedding=query_embedding,
+                query_embedding=query_embedding if query_embedding else None,
                 sources={"items": sources} if sources else None,
                 generation_time_ms=elapsed_ms,
                 token_count=tracker.total or None,
@@ -206,6 +226,7 @@ async def stream_agent(request: ResearchRequest, user: User, db: AsyncSession):
             yield f"data: {json.dumps(save_payload)}\n\n"
 
         except Exception as e:
+            print(f"[ERROR] Failed to save report to database: {e}")
             # Non-fatal — report was already streamed to user
             err_payload = {
                 "event": "warning",

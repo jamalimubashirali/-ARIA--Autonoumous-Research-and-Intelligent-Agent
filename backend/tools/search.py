@@ -24,7 +24,7 @@ async def tavily_search(query: str, num_results: int = 3) -> Dict[str, Any]:
         "query": query,
         "search_depth": "advanced",
         "include_answer": False,
-        "include_raw_content": False,
+        "include_raw_content": True,   # Return full page text — used as Firecrawl fallback
         "max_results": num_results,
     }
     

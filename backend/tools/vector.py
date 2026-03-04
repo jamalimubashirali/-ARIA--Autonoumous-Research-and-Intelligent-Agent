@@ -15,6 +15,7 @@ from langchain_core.embeddings import Embeddings
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
+import asyncio
 
 from config import settings
 from db.session import AsyncSessionLocal
@@ -36,7 +37,11 @@ class OpenRouterEmbeddings(Embeddings):
             response = httpx.post(
                 url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
-                json={"model": self.model, "input": text[:8192]},
+                json={
+                    "model": self.model,
+                    # Plain string input works and natively returns 2048 dims from OpenRouter for this model
+                    "input": text[:8192],
+                },
                 timeout=30.0
             )
             response.raise_for_status()
@@ -55,7 +60,11 @@ class OpenRouterEmbeddings(Embeddings):
                 response = await client.post(
                     url,
                     headers={"Authorization": f"Bearer {self.api_key}"},
-                    json={"model": self.model, "input": text[:8192]},
+                    json={
+                        "model": self.model,
+                        # Plain string input works and natively returns 2048 dims from OpenRouter for this model
+                        "input": text[:8192],
+                    },
                     timeout=30.0
                 )
                 response.raise_for_status()
@@ -232,6 +241,9 @@ async def save_report_chunks(
     if model is not None:
         for i, chunk_text in enumerate(chunks):
             try:
+                # Add delay to respect Azure Open AI API Rate limits
+                if i > 0:
+                    await asyncio.sleep(0.5)
                 vec = await model.aembed_query(chunk_text[:8192])
                 if vec and len(vec) > 0:
                     embeddings.append(vec)

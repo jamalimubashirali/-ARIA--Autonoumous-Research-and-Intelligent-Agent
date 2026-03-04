@@ -43,6 +43,18 @@ def reviewer_node(state: ResearchState) -> dict:
             }
         }
 
+    # Hard iteration guard: if we've already gone around twice, approve unconditionally
+    if state.get("writer_iterations", 1) >= 2:
+        print("  [Reviewer] Max iterations (2) reached — auto-approving to prevent infinite loop")
+        return {
+            "reviewer_decision": {
+                "verdict": "approve",
+                "feedback": "",
+                "scores": {"completeness": 3, "accuracy": 3, "source_attribution": 3},
+            },
+            "routing_target": "END",
+        }
+
     llm = get_llm(tier=TIER_HEAVY, temperature=0)
 
     prompt = ChatPromptTemplate.from_messages([
@@ -55,8 +67,8 @@ Score each dimension 1-5:
 - **Source Attribution (1-5)**: Are data points attributed to their sources? Can the reader trace claims?
 
 Rules for verdict:
-- If the AVERAGE score >= 3.5 → verdict = "approve"
-- If the AVERAGE score < 3.5 → verdict = "reject"
+- If the AVERAGE score >= 3.0 → verdict = "approve"
+- If the AVERAGE score < 3.0 → verdict = "reject"
 - If rejecting, provide SPECIFIC, ACTIONABLE feedback that tells the Writer exactly what to fix or the Planner exactly what to search for.
 - Also provide a rejection_category: "missing_facts" if the data itself is incomplete or inaccurate and requires new research, or "formatting" if the data is fine but the writer just did a bad job explaining/formatting it.
 - Do NOT reject for style preferences — only for substantive quality issues.
@@ -103,7 +115,7 @@ Final Report to Review:
         ) / 3
 
         # Override verdict based on computed average (in case LLM doesn't follow rules)
-        verdict = "approve" if avg_score >= 3.5 else "reject"
+        verdict = "approve" if avg_score >= 3.0 else "reject"
 
         print(f"  [Reviewer] Scores: C={review.completeness_score} A={review.accuracy_score} S={review.source_attribution_score} (avg={avg_score:.1f})")
         print(f"  [Reviewer] Verdict: {verdict}")

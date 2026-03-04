@@ -27,7 +27,7 @@ WINDOW_SECONDS = 60
 def _get_user_key(request: Request) -> str:
     """Extract a rate-limit key from the request."""
     # Try Clerk user ID from auth state
-    user_id = getattr(request.state, "user_id", None)
+    user_id = getattr(request.state, "user", None)
     if user_id:
         return f"user:{user_id}"
 

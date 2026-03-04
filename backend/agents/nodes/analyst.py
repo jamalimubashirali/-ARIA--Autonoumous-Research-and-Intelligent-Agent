@@ -13,6 +13,7 @@ from typing import List
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain.output_parsers import OutputFixingParser
 from pydantic import BaseModel, Field
 
 from agents.state import ResearchState
@@ -85,7 +86,9 @@ Focus on extracting the most critical missing concepts."""),
         ("user", "User Query: {query}\nDomain: {domain}")
     ])
     
-    return prompt | llm.with_structured_output(MissingQueries)
+    base_chain = prompt | llm.with_structured_output(MissingQueries)
+    return base_chain
+
 
 
 def _build_synthesis_chain():
@@ -145,25 +148,29 @@ async def analyst_node(state: ResearchState) -> dict:
     retrieved = await vector_search(query, domain, limit=8)
     print(f"  [CRAG] Retrieved {len(retrieved)} chunks")
 
-    # ---- Step 2: Grade each chunk ----
+    # ---- Step 2: Grade each chunk concurrently (no sequential sleeps) ----
     if retrieved:
-        print("  [CRAG] Step 2: Grading retrieved chunks...")
+        print("  [CRAG] Step 2: Grading retrieved chunks concurrently...")
         grading_chain = _build_grading_chain()
 
-        grades = []
-        for chunk in retrieved:
-            try:
-                grade = grading_chain.invoke({
-                    "query": query,
-                    "chunk": chunk["content"][:2000],
-                })
-                p, c = extract_tokens(grade)
-                get_token_tracker().add(p, c)
-                grades.append(grade)
-            except Exception as e:
-                print(f"  [CRAG] Grading failed for chunk: {e}")
-                # Assume relevant if grading fails (conservative)
-                grades.append(ChunkGrade(relevant=True, reason="Grading failed, assumed relevant"))
+        # Semaphore limits concurrent LLM calls to avoid rate limit bursts
+        grade_sem = asyncio.Semaphore(3)
+
+        async def _grade_chunk(chunk, q):
+            async with grade_sem:
+                try:
+                    grade = await grading_chain.ainvoke({
+                        "query": q,
+                        "chunk": chunk["content"][:2000],
+                    })
+                    p, c = extract_tokens(grade)
+                    get_token_tracker().add(p, c)
+                    return grade
+                except Exception as e:
+                    print(f"  [CRAG] Grading failed for chunk: {e}")
+                    return ChunkGrade(relevant=True, reason="Grading failed, assumed relevant")
+
+        grades = await asyncio.gather(*[_grade_chunk(chunk, query) for chunk in retrieved])
 
         relevant_chunks = [
             chunk for chunk, grade in zip(retrieved, grades) if grade.relevant
@@ -193,22 +200,13 @@ async def analyst_node(state: ResearchState) -> dict:
                 re_retrieved = await vector_search(rewritten_query, domain, limit=8)
                 print(f"  [CRAG] Re-retrieved {len(re_retrieved)} chunks")
 
-                # Re-grade
-                for chunk in re_retrieved:
-                    # Skip duplicates
-                    if any(rc["id"] == chunk["id"] for rc in relevant_chunks):
-                        continue
-                    try:
-                        grade = grading_chain.invoke({
-                            "query": rewritten_query,
-                            "chunk": chunk["content"][:2000],
-                        })
-                        p, c = extract_tokens(grade)
-                        get_token_tracker().add(p, c)
-                        if grade.relevant:
-                            relevant_chunks.append(chunk)
-                    except Exception:
-                        relevant_chunks.append(chunk)  # Assume relevant on error
+                # Filter out duplicates before re-grading
+                seen_ids = {rc["id"] for rc in relevant_chunks}
+                new_chunks = [c for c in re_retrieved if c["id"] not in seen_ids]
+
+                if new_chunks:
+                    new_grades = await asyncio.gather(*[_grade_chunk(chunk, rewritten_query) for chunk in new_chunks])
+                    relevant_chunks += [c for c, g in zip(new_chunks, new_grades) if g.relevant]
 
                 print(f"  [CRAG] After rewrite: {len(relevant_chunks)} total relevant chunks")
 
@@ -240,19 +238,47 @@ async def analyst_node(state: ResearchState) -> dict:
                     "research_iterations": research_iterations + 1
                 }
             except Exception as e:
-                print(f"  [CRAG] Failed to generate missing queries, falling back to inline search: {e}")
-                # Fallthrough to web_search
+                # LLM output was malformed JSON, and simple retry failed. Use an LLM-based output fixing parser as fallback.
+                print(f"  [CRAG] Standard parsed failed, attempting LLM Output Fixer for MissingQueries: {e}")
+                from langchain.output_parsers import PydanticOutputParser
+                from langchain.output_parsers import OutputFixingParser
+                parser = PydanticOutputParser(pydantic_object=MissingQueries)
+                fixer = OutputFixingParser.from_llm(parser=parser, llm=get_llm(tier=TIER_LIGHT, temperature=0))
+                
+                # We need the raw text to fix it, so we request without structured output
+                raw_llm = get_llm(tier=TIER_LIGHT, temperature=0.3)
+                raw_prompt = ChatPromptTemplate.from_messages([
+                    ("system", "You are a research director. Generate 2-3 highly specific search queries. Output ONLY valid JSON matching this schema: " + parser.get_format_instructions()),
+                    ("user", "User Query: {query}\nDomain: {domain}")
+                ])
+                try:
+                    raw_res = (raw_prompt | raw_llm).invoke({"query": query, "domain": domain})
+                    fixed_res = fixer.parse(raw_res.content)
+                    new_queries = fixed_res.queries
+                    
+                    print(f"  [CRAG] Successfully fixed JSON, generated {len(new_queries)} sub-tasks.")
+                    sub_tasks = state.get("sub_tasks", [])
+                    sub_tasks.extend(new_queries)
+                    return {
+                        "sub_tasks": sub_tasks,
+                        "missing_information": new_queries,
+                        "routing_target": "researcher",
+                        "research_iterations": research_iterations + 1
+                    }
+                except Exception as fix_e:
+                    print(f"  [CRAG] OutputFixingParser also failed, falling back to inline search: {fix_e}")
+                    # Fallthrough to web_search
         
         # Max iterations reached or query generation failed, rely on inline web fallback
         print("  [CRAG] Step 4: Insufficient results (max iterations reached). Triggering inline web search fallback...")
         rag_web_fallback = True
+        extra_search_results: list[dict] = []
         try:
-            web_results = await tavily_search(query, num_results=5)
+            web_results = await tavily_search.ainvoke({"query": query, "num_results": 5})
             if isinstance(web_results, dict) and "results" in web_results:
-                # Add web results to search_results state
-                state_search = state.get("search_results", [])
-                state_search.extend(web_results["results"])
-                print(f"  [CRAG] Added {len(web_results['results'])} web fallback results")
+                # Return as extra results to be merged by LangGraph state, NOT direct mutation
+                extra_search_results = web_results["results"]
+                print(f"  [CRAG] Fetched {len(extra_search_results)} web fallback results")
         except Exception as e:
             print(f"  [CRAG] Web fallback failed: {e}")
 
@@ -292,7 +318,7 @@ async def analyst_node(state: ResearchState) -> dict:
         metadata["rag_query_rewrites"] = rag_query_rewrites
         metadata["rag_web_fallback"] = rag_web_fallback
 
-        return {
+        result = {
             "analysis": analysis,
             "rag_context": rag_context,
             "rag_query_rewrites": rag_query_rewrites,
@@ -300,5 +326,9 @@ async def analyst_node(state: ResearchState) -> dict:
             "metadata": metadata,
             "routing_target": "writer"
         }
+        # Merge fallback web results properly via state return (no direct mutation)
+        if extra_search_results:
+            result["search_results"] = state.get("search_results", []) + extra_search_results
+        return result
     except Exception as e:
         return {"error": f"Analyst synthesis failed: {str(e)}"}
