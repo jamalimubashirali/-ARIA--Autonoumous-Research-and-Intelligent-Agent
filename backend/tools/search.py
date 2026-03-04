@@ -28,11 +28,21 @@ async def tavily_search(query: str, num_results: int = 3) -> Dict[str, Any]:
         "max_results": num_results,
     }
     
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, json=payload, headers=headers, timeout=20.0)
-            response.raise_for_status()
-            data = response.json()
-            return {"results": data.get("results", [])}
-        except Exception as e:
-            return {"error": f"Tavily search failed: {str(e)}"}
+    async with httpx.AsyncClient(timeout=45.0) as client:
+        last_error = None
+        for attempt in range(2):  # 1 retry
+            try:
+                response = await client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+                results = data.get("results", [])
+                print(f"  [TavilySearch] Got {len(results)} results for: '{query[:50]}...'")
+                return {"results": results}
+            except Exception as e:
+                last_error = e
+                if attempt == 0:
+                    print(f"  [TavilySearch] Attempt 1 failed: {e}. Retrying...")
+                    import asyncio
+                    await asyncio.sleep(1)
+        print(f"  [TavilySearch] All attempts failed: {last_error}")
+        return {"error": f"Tavily search failed: {str(last_error)}"}

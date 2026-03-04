@@ -241,6 +241,9 @@ async def analyst_node(state: ResearchState) -> dict:
 
     # ---- Step 4: Check if more research is needed ----
     research_iterations = state.get("research_iterations", 1)
+    extra_search_results: list[dict] = []
+    extra_scraped: list[str] = []
+    extra_sources: list[dict] = []
     if len(relevant_chunks) < 2:
         # If we haven't hit the max iterations, trigger backward routing to Researcher
         if research_iterations < 2:
@@ -298,18 +301,26 @@ async def analyst_node(state: ResearchState) -> dict:
         # Max iterations reached or query generation failed, rely on inline web fallback
         print("  [CRAG] Step 4: Insufficient results (max iterations reached). Triggering inline web search fallback...")
         rag_web_fallback = True
-        extra_search_results: list[dict] = []
         try:
             web_results = await tavily_search.ainvoke({"query": query, "num_results": 5})
             if isinstance(web_results, dict) and "results" in web_results:
-                # Return as extra results to be merged by LangGraph state, NOT direct mutation
                 extra_search_results = web_results["results"]
                 print(f"  [CRAG] Fetched {len(extra_search_results)} web fallback results")
+                # Also extract raw_content into scraped_content and populate sources
+                for r in extra_search_results:
+                    url = r.get("url", "")
+                    title = r.get("title", "Untitled")
+                    raw = r.get("raw_content") or r.get("content", "")
+                    if url:
+                        extra_sources.append({"title": title, "url": url})
+                    if raw and len(raw.strip()) > 100:
+                        extra_scraped.append(f"Source URL: {url}\n\nContent:\n{str(raw)}")
+                print(f"  [CRAG] Extracted {len(extra_scraped)} scraped pages, {len(extra_sources)} sources from web fallback")
         except Exception as e:
             print(f"  [CRAG] Web fallback failed: {e}")
 
     # ---- Step 4.5: Context Compression / Map-Reduce Extraction ----
-    scraped_content_list = state.get("scraped_content", [])
+    scraped_content_list = state.get("scraped_content", []) + extra_scraped
     extracted_scrapes = []
 
     if scraped_content_list:
@@ -392,6 +403,11 @@ async def analyst_node(state: ResearchState) -> dict:
         # Merge fallback web results properly via state return (no direct mutation)
         if extra_search_results:
             result["search_results"] = state.get("search_results", []) + extra_search_results
+        # Merge fallback scraped_content and sources 
+        if extra_scraped:
+            result["scraped_content"] = state.get("scraped_content", []) + extra_scraped
+        if extra_sources:
+            result["sources"] = state.get("sources", []) + extra_sources
         return result
     except Exception as e:
         return {"error": f"Analyst synthesis failed: {str(e)}"}
