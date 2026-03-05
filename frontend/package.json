@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.39.0",
+    "@clerk/themes": "^2.4.57",
     "@gsap/react": "^2.1.2",
     "@tailwindcss/typography": "^0.5.19",
     "@types/three": "^0.183.1",

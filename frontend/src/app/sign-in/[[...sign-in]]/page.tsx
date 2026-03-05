@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import Link from "next/link";
 
 export default function SignInPage() {
@@ -18,6 +19,7 @@ export default function SignInPage() {
 
       <SignIn
         appearance={{
+          baseTheme: dark,
           variables: {
             colorPrimary: "#06b6d4",
             colorBackground: "#0a0a0f",

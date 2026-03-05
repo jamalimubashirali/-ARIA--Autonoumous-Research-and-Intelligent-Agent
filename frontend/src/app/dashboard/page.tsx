@@ -3,17 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Activity,
   FileText,
+  TrendingUp,
+  Activity,
   Zap,
   ArrowRight,
-  Sparkles,
-  TrendingUp,
-  Send,
-  Paperclip,
-  Globe,
   Loader2,
+  Globe,
+  Paperclip,
 } from "lucide-react";
+import { GlassActionButton } from "@/components/ui/glass-action-button";
 import { useApiClient } from "@/lib/api";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { ShimmerBlock } from "@/components/ui/shimmer-skeleton";
@@ -229,17 +228,18 @@ export default function DashboardPage() {
               className="flex-1 resize-none bg-transparent text-zinc-100 placeholder:text-zinc-600 text-base leading-relaxed focus:outline-none max-h-40 overflow-y-auto scrollbar-thin"
               style={{ minHeight: "28px" }}
             />
-            <button
+            <GlassActionButton
               onClick={handleSubmit}
               disabled={!query.trim() || isSubmitting}
-              className="shrink-0 p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-zinc-950 transition-all duration-200 active:scale-95"
+              glowColor="cyan"
+              className="shrink-0 w-11 h-11 !rounded-xl p-0"
             >
               {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
               ) : (
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-5 h-5 text-zinc-300 group-hover:text-cyan-400 transition-colors" />
               )}
-            </button>
+            </GlassActionButton>
           </div>
 
           {/* Bottom toolbar */}

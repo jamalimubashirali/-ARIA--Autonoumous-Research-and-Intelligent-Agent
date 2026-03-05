@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { GlassActionButton } from "@/components/ui/glass-action-button";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { Check, Settings, CreditCard } from "lucide-react";
 
@@ -88,9 +89,12 @@ export default async function SettingsPage() {
                 </ul>
               </div>
               <div className="flex-col flex gap-2 w-full sm:w-auto">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 rounded-full">
+                <GlassActionButton
+                  glowColor="cyan"
+                  className="px-8 !rounded-full font-semibold"
+                >
                   Upgrade to Pro
-                </Button>
+                </GlassActionButton>
               </div>
             </div>
           </CardContent>

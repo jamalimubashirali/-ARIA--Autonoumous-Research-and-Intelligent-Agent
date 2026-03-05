@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/nextjs";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import NotionMarkdown from "@/components/notion-markdown";
+import { GlassActionButton } from "@/components/ui/glass-action-button";
 import {
   CheckCircle2,
   Loader2,
@@ -296,15 +297,15 @@ function ResearchContent() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end pt-6 pb-8 px-8 mt-4 bg-muted/5 border-t border-muted/20">
-                <Button
+                <GlassActionButton
                   onClick={handleStartResearch}
                   disabled={!query.trim()}
-                  size="lg"
-                  className="px-8 rounded-full shadow-lg hover:shadow-primary/25 bg-gradient-to-r from-primary to-primary/80 hover:to-primary/90 transition-all active:scale-95 text-base h-12"
+                  glowColor="cyan"
+                  className="px-8 !rounded-full text-base h-12"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
                   Deploy Agents
-                </Button>
+                </GlassActionButton>
               </CardFooter>
             </Card>
           </motion.div>
@@ -488,9 +489,9 @@ function ResearchContent() {
                 <History className="w-4 h-4 mr-2" />
                 View in Archives
               </Button>
-              <Button
-                size="lg"
-                className="w-full sm:w-auto rounded-full px-8 bg-gradient-to-r from-primary to-primary/80 hover:to-primary/90 shadow-lg hover:shadow-primary/25 transition-all"
+              <GlassActionButton
+                glowColor="cyan"
+                className="w-full sm:w-auto !rounded-full px-8"
                 onClick={() => {
                   setStep(1);
                   setQuery("");
@@ -499,7 +500,7 @@ function ResearchContent() {
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 New Mission
-              </Button>
+              </GlassActionButton>
             </div>
           </motion.div>
         )}
