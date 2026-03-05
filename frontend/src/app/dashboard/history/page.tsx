@@ -91,7 +91,7 @@ export default function HistoryPage() {
         <div className="inline-flex items-center justify-center p-2.5 rounded-xl bg-primary/10 mb-3">
           <History className="w-6 h-6 text-primary" />
         </div>
-        <h1 className="text-4xl font-bold tracking-tight gradient-text">
+        <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400">
           Intelligence Archives
         </h1>
         <p className="text-muted-foreground text-lg max-w-xl">

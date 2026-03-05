@@ -16,7 +16,6 @@ export function MouseGlow() {
     const ctx = particleCanvas.getContext("2d");
     if (!ctx) return;
 
-    // Size particle canvas to viewport
     const resize = () => {
       particleCanvas.width = window.innerWidth;
       particleCanvas.height = window.innerHeight;
@@ -31,8 +30,8 @@ export function MouseGlow() {
     let ringX = -500;
     let ringY = -500;
 
-    // Floating particles around cursor
-    const particles: {
+    // Wireframe-style particles — nodes + connecting lines
+    interface Node {
       x: number;
       y: number;
       vx: number;
@@ -40,7 +39,8 @@ export function MouseGlow() {
       life: number;
       maxLife: number;
       size: number;
-    }[] = [];
+    }
+    const nodes: Node[] = [];
     let frameCount = 0;
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -60,50 +60,82 @@ export function MouseGlow() {
       currentY += (mouseY - currentY) * 0.12;
       glow.style.transform = `translate(${currentX - 250}px, ${currentY - 250}px)`;
 
-      // Ring — slower follow for parallax
+      // Ring — slower follow
       ringX += (mouseX - ringX) * 0.06;
       ringY += (mouseY - ringY) * 0.06;
       ring.style.transform = `translate(${ringX - 100}px, ${ringY - 100}px)`;
 
-      // Spawn particles every 3 frames
-      if (frameCount % 3 === 0 && mouseX > 0) {
+      // Spawn nodes every 4 frames
+      if (frameCount % 4 === 0 && mouseX > 0) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 0.3 + Math.random() * 0.7;
-        particles.push({
-          x: mouseX + (Math.random() - 0.5) * 40,
-          y: mouseY + (Math.random() - 0.5) * 40,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 0.3,
+        const dist = 20 + Math.random() * 60;
+        nodes.push({
+          x: mouseX + Math.cos(angle) * dist,
+          y: mouseY + Math.sin(angle) * dist,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6 - 0.2,
           life: 0,
-          maxLife: 40 + Math.random() * 40,
-          size: 1 + Math.random() * 2,
+          maxLife: 50 + Math.random() * 50,
+          size: 1.5 + Math.random() * 1.5,
         });
       }
 
-      // Draw particles
+      // Draw wireframe pattern
       ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life++;
 
-        if (p.life >= p.maxLife) {
-          particles.splice(i, 1);
-          continue;
+      // Update nodes
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        n.x += n.vx;
+        n.y += n.vy;
+        n.life++;
+        if (n.life >= n.maxLife) {
+          nodes.splice(i, 1);
         }
+      }
 
-        const alpha = 1 - p.life / p.maxLife;
-        const fade = alpha * 0.6;
+      // Draw connections between nearby nodes (wireframe lines)
+      const connectDist = 120;
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        const alphaA = 1 - a.life / a.maxLife;
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < connectDist) {
+            const alphaB = 1 - b.life / b.maxLife;
+            const lineAlpha =
+              (1 - dist / connectDist) * Math.min(alphaA, alphaB) * 0.35;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(6, 182, 212, ${lineAlpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw node dots
+      for (const n of nodes) {
+        const alpha = (1 - n.life / n.maxLife) * 0.7;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(6, 182, 212, ${fade})`;
+        ctx.arc(
+          n.x,
+          n.y,
+          n.size * (1 - (n.life / n.maxLife) * 0.5),
+          0,
+          Math.PI * 2,
+        );
+        ctx.fillStyle = `rgba(6, 182, 212, ${alpha})`;
         ctx.fill();
       }
 
-      // Keep particles bounded
-      if (particles.length > 80) {
-        particles.splice(0, particles.length - 80);
+      // Cap nodes
+      if (nodes.length > 100) {
+        nodes.splice(0, nodes.length - 100);
       }
     };
 
@@ -146,7 +178,7 @@ export function MouseGlow() {
           boxShadow: "0 0 30px rgba(6,182,212,0.05)",
         }}
       />
-      {/* Particle canvas — behind content */}
+      {/* Wireframe particle canvas — behind content */}
       <canvas
         ref={particlesRef}
         className="fixed top-0 left-0 w-full h-full pointer-events-none"

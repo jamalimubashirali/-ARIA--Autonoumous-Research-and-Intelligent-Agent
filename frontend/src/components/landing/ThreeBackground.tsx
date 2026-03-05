@@ -112,10 +112,10 @@ export function ThreeBackground() {
     scene.add(plane);
 
     // ── Drone camera path ──
-    // Start position (hero view — high above, looking down at terrain)
-    const startCam = { x: 0, y: 12, z: 28, lookY: -2 };
-    // End position (scrolled — swooped low and forward over the terrain)
-    const endCam = { x: -8, y: 6, z: 10, lookY: -6 };
+    // Start position (hero view — close above terrain, angled down)
+    const startCam = { x: 0, y: 8, z: 20, lookY: -4 };
+    // End position (scrolled — swooped low and forward, close to peaks)
+    const endCam = { x: -6, y: 4, z: 5, lookY: -6 };
 
     // Animated values driven by scroll
     const droneState = {

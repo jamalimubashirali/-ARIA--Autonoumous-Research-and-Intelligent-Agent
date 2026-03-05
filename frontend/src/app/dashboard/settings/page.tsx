@@ -8,60 +8,71 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { Check } from "lucide-react";
+import { Check, Settings, CreditCard } from "lucide-react";
 
 export default async function SettingsPage() {
   const user = await currentUser();
-  // In a real app we would fetch the user's subscription from DB
   const plan = "Free Trial";
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
+    <div className="space-y-8 max-w-4xl mt-4 pb-20">
+      <div className="space-y-2">
+        <div className="inline-flex items-center justify-center p-2.5 rounded-xl bg-primary/10 mb-3">
+          <Settings className="w-6 h-6 text-primary" />
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
           Settings & Billing
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-zinc-500 text-lg max-w-xl">
           Manage your account preferences and subscription.
         </p>
       </div>
 
       <div className="grid gap-6">
-        <Card>
+        <Card className="bg-zinc-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0 overflow-hidden">
           <CardHeader>
-            <CardTitle>Account Information</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-zinc-100">Account Information</CardTitle>
+            <CardDescription className="text-zinc-500">
               Your personal account details managed by Clerk.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <div>
-              <span className="font-semibold text-sm mr-2">Email:</span>
-              <span className="text-sm text-muted-foreground">
+              <span className="font-semibold text-sm mr-2 text-zinc-300">
+                Email:
+              </span>
+              <span className="text-sm text-zinc-500">
                 {user?.emailAddresses[0]?.emailAddress || "Loading..."}
               </span>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button variant="outline">Manage Account via Clerk</Button>
+          <CardFooter className="border-t border-white/5 pt-4">
+            <Button
+              variant="outline"
+              className="border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+            >
+              Manage Account via Clerk
+            </Button>
           </CardFooter>
         </Card>
 
-        <Card>
+        <Card className="bg-zinc-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0 overflow-hidden">
           <CardHeader>
-            <CardTitle>Subscription Plan</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-zinc-100">Subscription Plan</CardTitle>
+            <CardDescription className="text-zinc-500">
               You are currently on the {plan} plan.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm flex flex-col sm:flex-row items-center justify-between p-6">
+            <div className="rounded-2xl ring-1 ring-white/10 bg-zinc-800/40 backdrop-blur flex flex-col sm:flex-row items-center justify-between p-6">
               <div className="space-y-1 mb-4 sm:mb-0">
-                <h3 className="font-semibold">Pro Plan</h3>
-                <p className="text-sm text-muted-foreground">
+                <h3 className="font-semibold text-zinc-100 text-lg">
+                  Pro Plan
+                </h3>
+                <p className="text-sm text-zinc-500">
                   $49/month for unlimited reports.
                 </p>
-                <ul className="text-sm text-muted-foreground mt-4 space-y-2">
+                <ul className="text-sm text-zinc-400 mt-4 space-y-2">
                   <li className="flex items-center">
                     <Check className="h-4 w-4 mr-2 text-primary" /> Advanced web
                     scraping
@@ -77,15 +88,22 @@ export default async function SettingsPage() {
                 </ul>
               </div>
               <div className="flex-col flex gap-2 w-full sm:w-auto">
-                <Button>Upgrade to Pro</Button>
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 rounded-full">
+                  Upgrade to Pro
+                </Button>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="bg-muted/50 py-4 px-6 flex justify-between items-center rounded-b-lg">
-            <span className="text-sm text-muted-foreground">
+          <CardFooter className="border-t border-white/5 py-4 px-6 flex justify-between items-center">
+            <span className="text-sm text-zinc-600 flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
               Powered by Stripe
             </span>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+            >
               Manage Billing
             </Button>
           </CardFooter>

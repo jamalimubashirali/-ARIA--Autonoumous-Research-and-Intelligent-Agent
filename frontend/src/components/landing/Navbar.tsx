@@ -35,36 +35,36 @@ export function Navbar() {
             className="pointer-events-none opacity-[0.06] rounded-full absolute inset-0 noise-overlay"
           />
           <div className="relative">
-            <div className="flex h-14 items-center justify-between">
-              {/* Logo */}
-              <div className="flex items-center gap-8">
-                <Link
-                  href="/"
-                  className="text-white font-semibold text-sm tracking-tight"
+            <div className="flex h-14 items-center justify-between relative">
+              {/* Logo — left */}
+              <Link
+                href="/"
+                className="text-white font-semibold text-sm tracking-tight"
+              >
+                ARIA
+              </Link>
+
+              {/* Nav links — absolute center */}
+              <nav className="hidden md:flex items-center gap-6 text-sm absolute left-1/2 -translate-x-1/2">
+                <a
+                  href="#features"
+                  className="text-zinc-300 hover:text-white transition"
                 >
-                  ARIA
-                </Link>
-                <nav className="hidden md:flex items-center gap-6 text-sm">
-                  <a
-                    href="#features"
-                    className="text-zinc-300 hover:text-white transition"
-                  >
-                    Features
-                  </a>
-                  <a
-                    href="#pricing"
-                    className="text-zinc-300 hover:text-white transition"
-                  >
-                    Pricing
-                  </a>
-                  <a
-                    href="#testimonials"
-                    className="text-zinc-300 hover:text-white transition"
-                  >
-                    Testimonials
-                  </a>
-                </nav>
-              </div>
+                  Features
+                </a>
+                <a
+                  href="#pricing"
+                  className="text-zinc-300 hover:text-white transition"
+                >
+                  Pricing
+                </a>
+                <a
+                  href="#testimonials"
+                  className="text-zinc-300 hover:text-white transition"
+                >
+                  Testimonials
+                </a>
+              </nav>
 
               {/* Actions */}
               <div className="flex items-center gap-3">

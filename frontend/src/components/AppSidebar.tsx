@@ -32,25 +32,32 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="space-y-4 py-4 flex flex-col h-full bg-secondary/10 dark:bg-slate-900 border-r w-64 shrink-0">
-      <div className="px-3 py-2 flex-1">
-        <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">Menu</h2>
+    <div className="flex flex-col h-full bg-zinc-950/60 backdrop-blur-xl border-r border-white/5 w-64 shrink-0">
+      <div className="px-3 py-6 flex-1">
+        <h2 className="mb-4 px-4 text-xs font-medium uppercase tracking-widest text-zinc-500">
+          Menu
+        </h2>
         <div className="space-y-1">
           {routes.map((route) => (
             <Link
               key={route.href}
               href={route.href}
               className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition",
+                "text-sm group flex p-3 w-full items-center font-medium cursor-pointer rounded-xl transition-all duration-200",
                 pathname === route.href
-                  ? "bg-black/5 dark:bg-white/10"
-                  : "text-zinc-500",
+                  ? "bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20"
+                  : "text-zinc-500 hover:text-zinc-200 hover:bg-white/5",
               )}
             >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3")} />
-                {route.label}
-              </div>
+              <route.icon
+                className={cn(
+                  "h-4 w-4 mr-3",
+                  pathname === route.href
+                    ? "text-cyan-400"
+                    : "text-zinc-600 group-hover:text-zinc-400",
+                )}
+              />
+              {route.label}
             </Link>
           ))}
         </div>

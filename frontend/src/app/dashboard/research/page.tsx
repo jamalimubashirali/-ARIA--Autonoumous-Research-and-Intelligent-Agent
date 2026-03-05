@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -34,10 +35,19 @@ type LogEvent = {
   type: "info" | "error" | "success" | "warning";
 };
 
-export default function NewResearchPage() {
+function ResearchContent() {
   const { getToken } = useAuth();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [query, setQuery] = useState("");
+
+  // Pre-fill from dock navigation
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) {
+      setQuery(q);
+    }
+  }, [searchParams]);
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [finalReport, setFinalReport] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -241,7 +251,7 @@ export default function NewResearchPage() {
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">
+          <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
             Intelligence Request
           </h1>
           <p className="text-muted-foreground mt-2 max-w-xl text-lg">
@@ -495,5 +505,19 @@ export default function NewResearchPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function NewResearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full w-full items-center justify-center p-8">
+          <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+        </div>
+      }
+    >
+      <ResearchContent />
+    </Suspense>
   );
 }
