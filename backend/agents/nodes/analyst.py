@@ -34,6 +34,11 @@ class QueryRewrite(BaseModel):
     rewritten_query: str = Field(description="Improved query for better retrieval")
 
 
+class RetryVote(BaseModel):
+    should_retry: bool = Field(description="True if we should try rewriting and querying the vector database again. False if we should skip directly to web search.")
+    reason: str = Field(description="Brief reason for the vote")
+
+
 class MissingQueries(BaseModel):
     queries: List[str] = Field(description="2-3 highly specific search queries to find the missing information")
 
@@ -75,6 +80,20 @@ Rewrite the query to be more specific and likely to retrieve relevant informatio
     return prompt | llm.with_structured_output(QueryRewrite)
 
 
+def _build_retry_vote_chain():
+    """Votes whether to rewrite the query or skip directly to web search."""
+    llm = get_llm(tier=TIER_LIGHT, temperature=0)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are a research director. The user query produced mostly irrelevant results from our internal vector database.
+Based on the query and domain, vote whether rewriting the query and trying the internal database again is likely to succeed, OR if we should immediately skip to external web search because the topic is likely not in the database.
+Vote True to retry the internal database. Vote False to skip to web search."""),
+        ("user", "Query: {query}\nDomain: {domain}")
+    ])
+
+    return prompt | llm.with_structured_output(RetryVote)
+
+
 def _build_missing_queries_chain():
     """Generates specific sub-tasks when previous research failed to find relevant data."""
     llm = get_llm(tier=TIER_LIGHT, temperature=0.3)
@@ -102,6 +121,7 @@ Rules:
 - Extract complete names of frameworks or methodologies, along with their definitions.
 - Write in detailed bullet points or short paragraphs.
 - Do NOT write a high-level, generic summary. We need granular depth.
+- Be overwhelmingly exhaustive. Extract every single relevant data point, controversy, timeline, or metric. Do not truncate useful details.
 - If the document contains absolutely nothing relevant to the query, output ONLY 'NO_RELEVANT_INFO'."""),
         ("user", "Query: {query}\n\nSource Content:\n{document}")
     ])
@@ -128,6 +148,7 @@ Rules:
 - Prioritize historical context where it is recent and relevant.
 - Extensively incorporate rich details, frameworks, methodologies, and actionable insights found within the scraped content.
 - Do NOT merely summarize heavily; retain the depth, nuance, and specific examples provided in the source material (e.g., specific metrics, named frameworks, quotes, or deep-dive details).
+- Produce a massive, exhaustive dossier. Do not worry about length. Over-index on providing every single piece of evidence, statistic, and quote found in the scraped deep-dives.
 - Be extremely thorough — the Writer node depends entirely on your analysis to write the final rich report. Do not leave out valuable information."""),
         ("user", """Query: {query}
 
@@ -179,7 +200,9 @@ async def analyst_node(state: ResearchState) -> dict:
 
         async def _grade_chunk(chunk, q):
             async with grade_sem:
-                for attempt in range(3):
+                # Introduce a generic delay to prevent rapid RPM/TPM bursting on S0 tiers
+                await asyncio.sleep(1.5)
+                for attempt in range(4):
                     try:
                         grade = await grading_chain.ainvoke({
                             "query": q,
@@ -189,10 +212,10 @@ async def analyst_node(state: ResearchState) -> dict:
                         get_token_tracker().add(p, c)
                         return grade
                     except Exception as e:
-                        if attempt == 2:
+                        if attempt == 3:
                             print(f"  [CRAG] Grading failed permanently for chunk: {e}")
                             return ChunkGrade(relevant=True, reason="Grading failed, assumed relevant")
-                        delay = 2 * (attempt + 1)
+                        delay = 4 * (attempt + 1)  # 4s, 8s, 12s backoff
                         print(f"  [CRAG] Grading rate limit/error (attempt {attempt+1}): {e}. Retrying in {delay}s...")
                         await asyncio.sleep(delay)
 
@@ -206,38 +229,53 @@ async def analyst_node(state: ResearchState) -> dict:
 
         # ---- Step 3: Rewrite query if >50% irrelevant ----
         if irrelevant_count > len(retrieved) / 2:
-            print("  [CRAG] Step 3: >50% irrelevant - rewriting query...")
-            rewrite_chain = _build_rewrite_chain()
-
+            print("  [CRAG] Step 3: >50% irrelevant - checking if vector retry is viable...")
+            vote_chain = _build_retry_vote_chain()
+            is_viable = True
             try:
-                rewrite = rewrite_chain.invoke({
-                    "query": query,
-                    "domain": domain,
-                    "irrelevant_count": irrelevant_count,
-                    "total_count": len(retrieved),
-                })
-                p, c = extract_tokens(rewrite)
+                vote = vote_chain.invoke({"query": query, "domain": domain})
+                p, c = extract_tokens(vote)
                 get_token_tracker().add(p, c)
-                rewritten_query = rewrite.rewritten_query
-                rag_query_rewrites = 1
-                print(f"  [CRAG] Rewritten query: '{rewritten_query}'")
-
-                # Re-retrieve with improved query
-                re_retrieved = await vector_search(rewritten_query, domain, limit=8)
-                print(f"  [CRAG] Re-retrieved {len(re_retrieved)} chunks")
-
-                # Filter out duplicates before re-grading
-                seen_ids = {rc["id"] for rc in relevant_chunks}
-                new_chunks = [c for c in re_retrieved if c["id"] not in seen_ids]
-
-                if new_chunks:
-                    new_grades = await asyncio.gather(*[_grade_chunk(chunk, rewritten_query) for chunk in new_chunks])
-                    relevant_chunks += [c for c, g in zip(new_chunks, new_grades) if g.relevant]
-
-                print(f"  [CRAG] After rewrite: {len(relevant_chunks)} total relevant chunks")
-
+                is_viable = vote.should_retry
+                print(f"  [CRAG] Vector retry vote: {vote.should_retry} ({vote.reason})")
             except Exception as e:
-                print(f"  [CRAG] Query rewrite failed: {e}")
+                print(f"  [CRAG] Vote failed, defaulting to retry: {e}")
+
+            if is_viable:
+                print("  [CRAG] Rewriting query...")
+                rewrite_chain = _build_rewrite_chain()
+
+                try:
+                    rewrite = rewrite_chain.invoke({
+                        "query": query,
+                        "domain": domain,
+                        "irrelevant_count": irrelevant_count,
+                        "total_count": len(retrieved),
+                    })
+                    p, c = extract_tokens(rewrite)
+                    get_token_tracker().add(p, c)
+                    rewritten_query = rewrite.rewritten_query
+                    rag_query_rewrites = 1
+                    print(f"  [CRAG] Rewritten query: '{rewritten_query}'")
+
+                    # Re-retrieve with improved query
+                    re_retrieved = await vector_search(rewritten_query, domain, limit=8)
+                    print(f"  [CRAG] Re-retrieved {len(re_retrieved)} chunks")
+
+                    # Filter out duplicates before re-grading
+                    seen_ids = {rc["id"] for rc in relevant_chunks}
+                    new_chunks = [c for c in re_retrieved if c["id"] not in seen_ids]
+
+                    if new_chunks:
+                        new_grades = await asyncio.gather(*[_grade_chunk(chunk, rewritten_query) for chunk in new_chunks])
+                        relevant_chunks += [c for c, g in zip(new_chunks, new_grades) if g.relevant]
+
+                    print(f"  [CRAG] After rewrite: {len(relevant_chunks)} total relevant chunks")
+
+                except Exception as e:
+                    print(f"  [CRAG] Query rewrite failed: {e}")
+            else:
+                print("  [CRAG] Skipping vector retry due to negative vote.")
 
     # ---- Step 4: Check if more research is needed ----
     research_iterations = state.get("research_iterations", 1)
@@ -331,7 +369,8 @@ async def analyst_node(state: ResearchState) -> dict:
         
         async def _extract_doc(doc_text):
             async with ext_sem:
-                for attempt in range(3):
+                await asyncio.sleep(1.5)
+                for attempt in range(4):
                     try:
                         # chunk to max ~35k chars to prevent light model overflow
                         res = await extractor_chain.ainvoke({
@@ -342,11 +381,11 @@ async def analyst_node(state: ResearchState) -> dict:
                         get_token_tracker().add(p, c)
                         return res.content
                     except Exception as e:
-                        if attempt == 2:
+                        if attempt == 3:
                             print(f"  [CRAG] Extractor failed permanently: {e}")
                             # fallback to basic truncation
                             return doc_text[:3000]
-                        delay = 2 * (attempt + 1)
+                        delay = 4 * (attempt + 1)
                         print(f"  [CRAG] Extractor rate limit/error (attempt {attempt+1}): {e}. Retrying in {delay}s...")
                         await asyncio.sleep(delay)
                     

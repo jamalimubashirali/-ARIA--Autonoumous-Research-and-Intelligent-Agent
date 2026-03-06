@@ -102,7 +102,7 @@ Rules:
         previous_report = state.get("final_report", "")
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a professional intelligence report writer revising a report based on editorial feedback.
+            ("system", """You are a professional intelligence report writer revising a massive, comprehensive data-driven report based on editorial feedback.
 
 You MUST use the following section structure for a {domain} report:
 {template}
@@ -112,7 +112,8 @@ REVISION INSTRUCTIONS:
 - Address EVERY point raised in the feedback.
 - Keep the parts that were good; only improve what was criticized.
 - Maintain the same structure and formatting.
-- Be exhaustive, highly detailed, and comprehensive. Weave in all frameworks, methodologies, specific metrics, named quotes, and actionable insights detailed in the analysis. Do not leave out crucial depth.
+- Be overwhelmingly exhaustive. Weave in all frameworks, methodologies, specific metrics, named quotes, and actionable insights detailed in the analysis. Output a massive amount of text. Do not compress or summarize the analysis; instead, expand on every single detail it provides.
+- Deeply explain every metric, study, or claim. Use rich vocabulary and authoritative tone.
 - CRITICAL: You MUST cite sources inline using the format [Source: Title](URL).
 - Use the numbered source list provided to add proper citations.
 - Output clean Markdown only."""),
@@ -152,15 +153,16 @@ Reviewer Feedback (MUST ADDRESS):
     else:
         # First draft prompt
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a professional intelligence report writer. Generate a structured {domain} intelligence report based on the analysis provided.
+            ("system", """You are a professional intelligence report writer. Generate a MASSIVE, highly structured, and data-rich {domain} intelligence report based on the exhaustive analysis provided.
 
 You MUST use the following section structure for a {domain} report:
 {template}
 
 Rules:
-- Be exhaustive, highly detailed, and comprehensive.
-- Weave in all frameworks, methodologies, specific metrics, named quotes, and actionable insights detailed in the analysis. Do not leave out crucial depth.
-- Each section should contain substantive, long-form content, not filler or brief summaries. Explain concepts and findings deeply.
+- Be overwhelmingly exhaustive. Your goal is to produce a very long, highly detailed document. Do not compress or summarize the analysis; instead, expand on every single detail it provides.
+- Weave in all frameworks, methodologies, specific metrics, named quotes, controversies, and actionable insights detailed in the analysis. Do not leave out *any* crucial depth.
+- Each section should contain multiple substantive, long-form paragraphs. Explain concepts and findings deeply, providing context.
+- Use bullet points or tables where appropriate to present complex data or comparisons clearly.
 - CRITICAL: You MUST cite your sources inline throughout the report.
   Use this format: [Source: Title](URL)
   Example: According to a recent study [Source: Wearable Tech in Sports](https://example.com/study), injury rates decreased by 30%.

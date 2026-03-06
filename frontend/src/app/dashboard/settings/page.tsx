@@ -16,8 +16,8 @@ export default async function SettingsPage() {
   const plan = "Free Trial";
 
   return (
-    <div className="space-y-8 max-w-4xl mt-4 pb-20">
-      <div className="space-y-2">
+    <div className="space-y-8 max-w-4xl mx-auto mt-4 pb-20 px-4">
+      <div className="space-y-2 flex flex-col items-center text-center">
         <div className="inline-flex items-center justify-center p-2.5 rounded-xl bg-primary/10 mb-3">
           <Settings className="w-6 h-6 text-primary" />
         </div>
@@ -30,7 +30,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
-        <Card className="bg-zinc-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0 overflow-hidden">
+        <Card className="bg-black/20 backdrop-blur-3xl ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-zinc-100">Account Information</CardTitle>
             <CardDescription className="text-zinc-500">
@@ -57,7 +57,7 @@ export default async function SettingsPage() {
           </CardFooter>
         </Card>
 
-        <Card className="bg-zinc-900/50 backdrop-blur-xl ring-1 ring-white/10 border-0 overflow-hidden">
+        <Card className="bg-black/20 backdrop-blur-3xl ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-zinc-100">Subscription Plan</CardTitle>
             <CardDescription className="text-zinc-500">
@@ -65,7 +65,7 @@ export default async function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-2xl ring-1 ring-white/10 bg-zinc-800/40 backdrop-blur flex flex-col sm:flex-row items-center justify-between p-6">
+            <div className="rounded-2xl ring-1 ring-white/10 bg-black/20 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex flex-col sm:flex-row items-center justify-between p-6">
               <div className="space-y-1 mb-4 sm:mb-0">
                 <h3 className="font-semibold text-zinc-100 text-lg">
                   Pro Plan

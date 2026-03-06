@@ -85,11 +85,11 @@
 
 /* ─── Dark Mode — Zinc-950 + Cyan Accent ─── */
 .dark {
-  --background: oklch(0.07 0.005 265);
+  --background: oklch(0.05 0 0);
   --foreground: oklch(0.93 0.01 265);
-  --card: oklch(0.1 0.01 265);
+  --card: oklch(0.05 0 0 / 0.5);
   --card-foreground: oklch(0.93 0.01 265);
-  --popover: oklch(0.1 0.01 265);
+  --popover: oklch(0.05 0 0 / 0.7);
   --popover-foreground: oklch(0.93 0.01 265);
   --primary: oklch(0.72 0.17 195);
   --primary-foreground: oklch(0.05 0 0);
@@ -108,7 +108,7 @@
   --chart-3: oklch(0.7 0.12 160);
   --chart-4: oklch(0.6 0.18 210);
   --chart-5: oklch(0.75 0.1 185);
-  --sidebar: oklch(0.06 0.005 265);
+  --sidebar: oklch(0 0 0 / 0.2);
   --sidebar-foreground: oklch(0.93 0.01 265);
   --sidebar-primary: oklch(0.72 0.17 195);
   --sidebar-primary-foreground: oklch(0.05 0 0);

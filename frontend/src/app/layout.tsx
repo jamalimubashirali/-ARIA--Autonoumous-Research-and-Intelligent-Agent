@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
+import { ClerkProviderWrapper } from "@/components/clerk-provider-wrapper";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
@@ -27,52 +26,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-        variables: {
-          colorPrimary: "#06b6d4",
-          colorBackground: "#0a0a0f",
-          colorText: "#e4e4e7",
-          colorTextSecondary: "#71717a",
-          colorInputBackground: "#18181b",
-          colorInputText: "#e4e4e7",
-          borderRadius: "0.75rem",
-        },
-        elements: {
-          card: "bg-zinc-900/90 backdrop-blur-2xl border border-white/10 shadow-2xl",
-          formButtonPrimary:
-            "bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-semibold",
-          footerActionLink: "text-cyan-400 hover:text-cyan-300",
-          userButtonPopoverCard:
-            "bg-zinc-900 border border-white/10 shadow-2xl min-w-[280px]",
-          userButtonPopoverActionButton:
-            "text-zinc-300 hover:text-white hover:bg-white/5",
-          userButtonPopoverActionButtonText: "text-zinc-100",
-          userButtonPopoverActionButtonIcon: "text-zinc-400",
-          userButtonPopoverFooter: "hidden",
-          userPreviewMainIdentifier: "text-zinc-100 font-semibold",
-          userPreviewSecondaryIdentifier: "text-zinc-500",
-          userButtonAvatarBox:
-            "!w-10 !h-10 ring-2 ring-cyan-500/20 hover:ring-cyan-500/40 transition-all",
-          userPreviewAvatarBox: "!w-12 !h-12",
-        },
-      }}
-    >
-      <html lang="en" suppressHydrationWarning>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
         >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+          <ClerkProviderWrapper>
+            <div className="relative z-10 w-full min-h-screen">{children}</div>
+          </ClerkProviderWrapper>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

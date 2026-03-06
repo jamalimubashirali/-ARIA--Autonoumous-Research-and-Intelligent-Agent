@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -11,8 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/nextjs";
@@ -25,6 +23,14 @@ import {
   Sparkles,
   AlertCircle,
   History,
+  Activity,
+  Terminal,
+  Globe,
+  Bot,
+  ListOrdered,
+  Search,
+  PenTool,
+  Clock,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api";
 
@@ -39,16 +45,24 @@ type LogEvent = {
 function ResearchContent() {
   const { getToken } = useAuth();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState(1);
+  const router = useRouter();
+  const [step, setStep] = useState(2);
   const [query, setQuery] = useState("");
+  const hasStarted = useRef(false);
 
-  // Pre-fill from dock navigation
   useEffect(() => {
     const q = searchParams.get("q");
-    if (q) {
-      setQuery(q);
+    if (!q) {
+      router.push("/dashboard");
+      return;
     }
-  }, [searchParams]);
+    setQuery(q);
+    if (!hasStarted.current) {
+      hasStarted.current = true;
+      handleStartResearch(q);
+    }
+  }, [searchParams, router]);
+
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [finalReport, setFinalReport] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -79,7 +93,7 @@ function ResearchContent() {
     ]);
   };
 
-  const handleStartResearch = async () => {
+  const handleStartResearch = async (searchQuery: string = query) => {
     setStep(2);
     setLogs([]);
     setFinalReport(null);
@@ -106,7 +120,7 @@ function ResearchContent() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          query,
+          query: searchQuery,
           domain: "",
         }),
       });
@@ -188,16 +202,29 @@ function ResearchContent() {
                   "System",
                   "success",
                 );
+                // Save the report ID for final redirect
+                hasStarted.current = data.report_id;
               } else if (
                 eventName === "done" ||
                 eventName === "agent_run_completed"
               ) {
                 addLog(
-                  "Research compilation completed successfully.",
+                  "Research compilation completed successfully. Redirecting to report...",
                   "Orchestrator",
                   "success",
                 );
-                setStep(3); // Move to results view
+                // Redirect immediately to the report view
+                setTimeout(() => {
+                  const reportId =
+                    typeof hasStarted.current === "string"
+                      ? hasStarted.current
+                      : null;
+                  if (reportId) {
+                    router.push(`/dashboard/reports/${reportId}`);
+                  } else {
+                    router.push("/dashboard");
+                  }
+                }, 1000);
               } else if (eventName === "error") {
                 addLog(data.message || "An error occurred.", "System", "error");
                 setIsError(true);
@@ -247,70 +274,22 @@ function ResearchContent() {
     <div
       className={`mx-auto space-y-8 mt-8 pb-20 transition-all duration-500 ${step === 3 ? "max-w-6xl" : "max-w-4xl"}`}
     >
-      {step !== 3 && (
+      {step === 2 && (
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
-            Intelligence Request
+            Compiling Intelligence
           </h1>
           <p className="text-muted-foreground mt-2 max-w-xl text-lg">
-            Configure ARIA to autonomously research, analyze, and synthesize
-            data across your target domain.
+            ARIA is autonomously researching, analyzing, and synthesizing data
+            for your request.
           </p>
         </div>
       )}
 
       <AnimatePresence mode="wait">
-        {step === 1 && (
-          <motion.div
-            key="step1"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-          >
-            <Card className="border-muted bg-card/60 backdrop-blur-xl shadow-2xl overflow-hidden relative">
-              <div className="absolute top-0 left-0 w-1 h-full bg-primary/50" />
-              <CardHeader className="pt-8">
-                <div className="flex items-center gap-4 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    1
-                  </div>
-                  <CardTitle className="text-2xl">Define Directive</CardTitle>
-                </div>
-                <CardDescription className="text-base ml-14">
-                  Precisely specify your research objectives. The orchestration
-                  engine will adapt its strategy based on your prompt.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 ml-14">
-                <div className="space-y-3">
-                  <Textarea
-                    id="query"
-                    placeholder="e.g., Provide a comprehensive analysis of the rising agentic AI frameworks in 2026, comparing their architectures, limitations, and enterprise adoption readiness."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="min-h-[220px] resize-none text-base p-5 bg-background/50 rounded-xl border-muted-foreground/20 focus-visible:ring-primary/50 transition-all shadow-inner"
-                  />
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end pt-6 pb-8 px-8 mt-4 bg-muted/5 border-t border-muted/20">
-                <GlassActionButton
-                  onClick={handleStartResearch}
-                  disabled={!query.trim()}
-                  glowColor="cyan"
-                  className="px-8 !rounded-full text-base h-12"
-                >
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Deploy Agents
-                </GlassActionButton>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        )}
-
         {step === 2 && (
           <motion.div
             key="step2"
@@ -319,7 +298,7 @@ function ResearchContent() {
             animate="animate"
             exit="exit"
           >
-            <Card className="border-primary/30 bg-card/60 backdrop-blur-xl shadow-2xl overflow-hidden relative">
+            <Card className="border border-white/10 bg-black/20 backdrop-blur-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] shadow-2xl overflow-hidden relative">
               <div className="absolute top-0 left-0 w-full h-1.5 bg-muted overflow-hidden">
                 <div className="h-full bg-primary animate-pulse w-full"></div>
               </div>
@@ -356,55 +335,87 @@ function ResearchContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 relative">
-                <div className="absolute inset-0 bg-grid-white/5 bg-[size:20px_20px] pointer-events-none opacity-20" />
-                <div className="bg-[#0A0A0A] font-mono text-[13px] leading-relaxed h-[450px] overflow-y-auto p-6 space-y-3 shadow-inner relative z-10">
-                  {logs.map((log) => (
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      key={log.id}
-                      className="flex gap-4 items-start break-words border-b border-white/5 pb-3 last:border-0 last:pb-0"
-                    >
-                      <span className="text-slate-600 shrink-0 w-24">
-                        [{log.timestamp}]
-                      </span>
-                      <span
-                        className={`shrink-0 font-semibold w-28 uppercase tracking-wider text-xs mt-0.5 ${
-                          log.source === "Orchestrator"
-                            ? "text-blue-500"
-                            : log.source === "Planner"
-                              ? "text-cyan-400"
-                              : log.source === "Researcher"
-                                ? "text-amber-400"
-                                : log.source === "Analyst"
-                                  ? "text-fuchsia-400"
-                                  : log.source === "Reviewer"
-                                    ? "text-rose-400"
-                                    : log.source === "Writer"
-                                      ? "text-emerald-400"
-                                      : log.source === "System"
-                                        ? "text-slate-400"
-                                        : "text-slate-400"
-                        }`}
-                      >
-                        [ {log.source} ]
-                      </span>
-                      <span
-                        className={`flex-1 ${
-                          log.type === "error"
-                            ? "text-red-400 font-semibold"
-                            : log.type === "success"
-                              ? "text-emerald-400 font-medium"
-                              : log.type === "warning"
-                                ? "text-amber-300"
-                                : "text-slate-300"
-                        }`}
-                      >
-                        {log.message}
-                      </span>
-                    </motion.div>
-                  ))}
-                  <div ref={bottomRef} className="h-4" />
+                <div className="bg-black/20 text-[14px] leading-relaxed h-[500px] overflow-y-auto p-4 sm:p-8 shadow-inner relative z-10 backdrop-blur-md border-t border-white/5">
+                  <div className="relative border-l border-white/10 ml-4 py-2 space-y-8">
+                    {logs.map((log) => {
+                      const isError = log.type === "error";
+                      const isSuccess = log.type === "success";
+
+                      let Icon = Terminal;
+                      let iconColor = "text-slate-400";
+                      let bgColor = "bg-slate-500/10";
+
+                      if (log.source === "Orchestrator") {
+                        Icon = Bot;
+                        iconColor = "text-blue-400";
+                        bgColor = "bg-blue-500/10";
+                      } else if (log.source === "Planner") {
+                        Icon = ListOrdered;
+                        iconColor = "text-cyan-400";
+                        bgColor = "bg-cyan-500/10";
+                      } else if (log.source === "Researcher") {
+                        Icon = Globe;
+                        iconColor = "text-amber-400";
+                        bgColor = "bg-amber-500/10";
+                      } else if (log.source === "Analyst") {
+                        Icon = Activity;
+                        iconColor = "text-fuchsia-400";
+                        bgColor = "bg-fuchsia-500/10";
+                      } else if (log.source === "Reviewer") {
+                        Icon = Search;
+                        iconColor = "text-rose-400";
+                        bgColor = "bg-rose-500/10";
+                      } else if (log.source === "Writer") {
+                        Icon = PenTool;
+                        iconColor = "text-emerald-400";
+                        bgColor = "bg-emerald-500/10";
+                      } else if (log.source === "System") {
+                        Icon = Clock;
+                      }
+
+                      if (isError) {
+                        iconColor = "text-red-400";
+                        bgColor = "bg-red-500/10";
+                        Icon = AlertCircle;
+                      }
+                      if (isSuccess) {
+                        iconColor = "text-emerald-400";
+                        bgColor = "bg-emerald-500/10";
+                        Icon = CheckCircle2;
+                      }
+
+                      return (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          key={log.id}
+                          className="relative pl-8"
+                        >
+                          <div
+                            className={`absolute -left-[17px] top-0 rounded-full p-1.5 border border-white/5 ${bgColor} ${iconColor} bg-[#0f0f13] ring-[6px] ring-black/20 shadow-md`}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col gap-1 -mt-1">
+                            <div className="flex items-center gap-3">
+                              <span className="font-semibold text-zinc-200 tracking-wide text-xs uppercase">
+                                {log.source}
+                              </span>
+                              <span className="text-xs font-mono text-zinc-500">
+                                {log.timestamp}
+                              </span>
+                            </div>
+                            <div
+                              className={`text-zinc-400 mt-1 font-sans text-[15px] ${isError ? "text-red-300 font-medium" : isSuccess ? "text-emerald-300" : ""}`}
+                            >
+                              {log.message}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                    <div ref={bottomRef} className="h-4" />
+                  </div>
                 </div>
               </CardContent>
               {isError && (
@@ -420,88 +431,6 @@ function ResearchContent() {
                 </CardFooter>
               )}
             </Card>
-          </motion.div>
-        )}
-
-        {step === 3 && finalReport && (
-          <motion.div
-            key="step3"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="space-y-6"
-          >
-            {/* Success Banner */}
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
-            >
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-                Intelligence report compiled successfully
-              </p>
-            </motion.div>
-
-            {/* Document Container */}
-            <Card className="border-border/40 bg-card/80 backdrop-blur-xl shadow-xl overflow-hidden">
-              {/* Subtle top accent */}
-              <div className="h-[3px] bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
-
-              {/* Document Header */}
-              <div className="px-6 sm:px-10 md:px-14 pt-10 pb-6 border-b border-border/20">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs font-semibold tracking-wider uppercase text-primary bg-primary/10 px-3 py-1 rounded-full flex items-center">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    Generated Insight
-                  </span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground leading-tight">
-                  {(() => {
-                    const match = finalReport.match(/^##?\s+(.+)/m);
-                    return match ? match[1].replace(/\*+/g, "").trim() : query;
-                  })()}
-                </h1>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Generated by ARIA Autonomous Research Agents
-                </p>
-              </div>
-
-              {/* Document Body */}
-              <CardContent className="px-6 sm:px-10 md:px-14 py-8 md:py-10">
-                <NotionMarkdown
-                  content={finalReport
-                    .replace(/^##?\s+.*?(?:\n|$)/m, "")
-                    .trim()}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto rounded-full px-8 hover:bg-primary/5"
-                onClick={() => (window.location.href = "/dashboard/history")}
-              >
-                <History className="w-4 h-4 mr-2" />
-                View in Archives
-              </Button>
-              <GlassActionButton
-                glowColor="cyan"
-                className="w-full sm:w-auto !rounded-full px-8"
-                onClick={() => {
-                  setStep(1);
-                  setQuery("");
-                  setFinalReport(null);
-                }}
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                New Mission
-              </GlassActionButton>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

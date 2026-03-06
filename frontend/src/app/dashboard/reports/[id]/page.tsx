@@ -161,14 +161,23 @@ export default function ReportDetailPage() {
     >
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <Button
-          variant="ghost"
-          className="w-fit"
-          onClick={() => router.push("/dashboard/history")}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Archives
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/dashboard/history")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Archives
+          </Button>
+          <Button
+            className="bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20 hover:text-cyan-600 dark:hover:text-cyan-400"
+            variant="ghost"
+            onClick={() => router.push("/dashboard")}
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            New Mission
+          </Button>
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleShare} disabled={isSharing}>
             {isSharing ? (
