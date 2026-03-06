@@ -51,12 +51,19 @@ async def get_or_create_user(clerk_id: str, db: AsyncSession) -> User:
     user = result.scalar_one_or_none()
 
     if not user:
+        today = date.today()
+        # Initial reset date is the first of next month
+        if today.month == 12:
+            next_reset = date(today.year + 1, 1, 1)
+        else:
+            next_reset = date(today.year, today.month + 1, 1)
+
         user = User(
             clerk_id=clerk_id,
             email=f"{clerk_id}@pending.aria",
             plan="free",
             reports_this_month=0,
-            usage_reset_date=date.today(),
+            usage_reset_date=next_reset,
         )
         db.add(user)
         await db.commit()

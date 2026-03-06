@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -276,13 +275,14 @@ function ResearchContent() {
     >
       {step === 2 && (
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-4">
-            <Sparkles className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl mb-4 relative group">
+            <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-full scale-110 group-hover:scale-150 transition-transform duration-700" />
+            <Sparkles className="w-8 h-8 text-cyan-600 dark:text-cyan-400 relative z-10" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
+          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-neutral-900 via-neutral-700 to-neutral-500 dark:from-white dark:via-zinc-200 dark:to-zinc-500">
             Compiling Intelligence
           </h1>
-          <p className="text-muted-foreground mt-2 max-w-xl text-lg">
+          <p className="text-muted-foreground mt-2 max-w-xl text-lg font-medium">
             ARIA is autonomously researching, analyzing, and synthesizing data
             for your request.
           </p>
@@ -298,11 +298,11 @@ function ResearchContent() {
             animate="animate"
             exit="exit"
           >
-            <Card className="border border-white/10 bg-black/20 backdrop-blur-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] shadow-2xl overflow-hidden relative">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-muted overflow-hidden">
-                <div className="h-full bg-primary animate-pulse w-full"></div>
+            <Card className="border border-border/50 dark:border-white/10 bg-card/60 dark:bg-zinc-950/60 backdrop-blur-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgb(0,0,0,0.6)] overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-[3px] bg-muted overflow-hidden z-20">
+                <div className="h-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent animate-[shimmer_2s_infinite] w-full blur-[1px]"></div>
               </div>
-              <CardHeader className="pt-8 bg-muted/5 border-b border-muted/20">
+              <CardHeader className="pt-8 bg-background/40 border-b border-border/40 relative z-10">
                 <CardTitle className="text-2xl flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     {isError ? (
@@ -327,7 +327,7 @@ function ResearchContent() {
                     </div>
                   </div>
                   {!isError && (
-                    <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-medium flex items-center">
+                    <div className="bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 px-4 py-1.5 rounded-full text-sm font-bold flex items-center border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Processing
                     </div>
@@ -335,8 +335,8 @@ function ResearchContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 relative">
-                <div className="bg-black/20 text-[14px] leading-relaxed h-[500px] overflow-y-auto p-4 sm:p-8 shadow-inner relative z-10 backdrop-blur-md border-t border-white/5">
-                  <div className="relative border-l border-white/10 ml-4 py-2 space-y-8">
+                <div className="bg-muted/30 dark:bg-black/40 text-[14px] leading-relaxed h-[500px] overflow-y-auto p-4 sm:p-8 shadow-inner relative z-10 backdrop-blur-md">
+                  <div className="relative border-l-2 border-border/60 dark:border-white/10 ml-4 py-2 space-y-8">
                     {logs.map((log) => {
                       const isError = log.type === "error";
                       const isSuccess = log.type === "success";
@@ -389,24 +389,24 @@ function ResearchContent() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           key={log.id}
-                          className="relative pl-8"
+                          className="relative pl-8 group/log"
                         >
                           <div
-                            className={`absolute -left-[17px] top-0 rounded-full p-1.5 border border-white/5 ${bgColor} ${iconColor} bg-[#0f0f13] ring-[6px] ring-black/20 shadow-md`}
+                            className={`absolute -left-[18px] top-0 rounded-full p-2 border border-border/50 dark:border-white/10 ${bgColor} ${iconColor} bg-background ring-[6px] ring-muted/30 dark:ring-black/40 shadow-sm transition-transform duration-300 group-hover/log:scale-110`}
                           >
                             <Icon className="w-4 h-4" />
                           </div>
-                          <div className="flex flex-col gap-1 -mt-1">
+                          <div className="flex flex-col gap-1.5 -mt-1 p-3 rounded-xl hover:bg-muted/40 dark:hover:bg-white/5 transition-colors duration-300 border border-transparent hover:border-border/50">
                             <div className="flex items-center gap-3">
-                              <span className="font-semibold text-zinc-200 tracking-wide text-xs uppercase">
+                              <span className="font-bold text-foreground tracking-wide text-xs uppercase">
                                 {log.source}
                               </span>
-                              <span className="text-xs font-mono text-zinc-500">
+                              <span className="text-xs font-mono font-medium text-muted-foreground/70">
                                 {log.timestamp}
                               </span>
                             </div>
                             <div
-                              className={`text-zinc-400 mt-1 font-sans text-[15px] ${isError ? "text-red-300 font-medium" : isSuccess ? "text-emerald-300" : ""}`}
+                              className={`text-muted-foreground font-medium text-[15px] ${isError ? "text-red-600 dark:text-red-400 font-bold" : isSuccess ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}`}
                             >
                               {log.message}
                             </div>

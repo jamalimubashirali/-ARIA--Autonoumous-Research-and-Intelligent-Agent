@@ -19,9 +19,11 @@ from starlette.responses import JSONResponse
 _request_log: dict[str, list[float]] = defaultdict(list)
 
 # Config
-RATE_LIMIT_AUTHENTICATED = 10     # requests per minute
-RATE_LIMIT_UNAUTHENTICATED = 5    # requests per minute
+RATE_LIMIT_AI = 10               # requests per minute for expensive AI endpoints
+RATE_LIMIT_GENERAL_AUTH = 100    # requests per minute for general authenticated traffic
+RATE_LIMIT_GENERAL_UNAUTH = 30   # requests per minute for unauthenticated
 WINDOW_SECONDS = 60
+
 
 
 def _get_user_key(request: Request) -> str:
@@ -73,9 +75,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         key = _get_user_key(request)
         is_authenticated = key.startswith("user:")
-        limit = RATE_LIMIT_AUTHENTICATED if is_authenticated else RATE_LIMIT_UNAUTHENTICATED
+        
+        # Differentiate between expensive AI endpoints and general endpoints
+        is_ai_endpoint = request.url.path.startswith("/api/v1/research")
+        
+        if is_ai_endpoint:
+            limit = RATE_LIMIT_AI
+            bucket_key = f"ai:{key}"
+        else:
+            limit = RATE_LIMIT_GENERAL_AUTH if is_authenticated else RATE_LIMIT_GENERAL_UNAUTH
+            bucket_key = f"gen:{key}"
 
-        is_limited, remaining = _is_rate_limited(key, limit)
+        is_limited, remaining = _is_rate_limited(bucket_key, limit)
 
         if is_limited:
             return JSONResponse(

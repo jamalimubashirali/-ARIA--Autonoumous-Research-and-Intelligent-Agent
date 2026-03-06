@@ -30,7 +30,7 @@ export const GlassActionButton = React.forwardRef<
     <button
       ref={ref}
       className={cn(
-        "group inline-flex cursor-pointer overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.15,0.83,0.66,1)] hover:-translate-y-[2px] hover:text-white text-zinc-300 bg-white/5 border border-white/10 rounded-xl relative items-center justify-center disabled:opacity-50 disabled:pointer-events-none active:scale-95",
+        "group inline-flex cursor-pointer overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.15,0.83,0.66,1)] hover:-translate-y-[2px] text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl relative items-center justify-center disabled:opacity-50 disabled:pointer-events-none active:scale-95",
         className,
       )}
       {...props}
@@ -44,7 +44,7 @@ export const GlassActionButton = React.forwardRef<
       />
       <span
         aria-hidden="true"
-        className="absolute inset-0 rounded-xl pointer-events-none bg-gradient-to-t from-white/15 via-white/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500"
+        className="absolute inset-0 rounded-xl pointer-events-none bg-gradient-to-t from-black/5 via-black/5 dark:from-white/15 dark:via-white/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500"
       />
 
       {/* Content wrapper for relative positioning above absolute borders */}
