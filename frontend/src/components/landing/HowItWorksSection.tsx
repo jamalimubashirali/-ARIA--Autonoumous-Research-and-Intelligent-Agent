@@ -42,10 +42,10 @@ export function HowItWorksSection() {
     <section ref={sectionRef} className="w-full px-4 py-24 relative z-10">
       <div className="max-w-7xl mx-auto">
         <div data-how-heading className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light text-zinc-100 tracking-tighter mb-4">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light text-zinc-900 dark:text-zinc-100 tracking-tighter mb-4">
             How ARIA works
           </h2>
-          <p className="text-lg text-zinc-400 max-w-xl mx-auto">
+          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto">
             From raw query to verified report in three autonomous steps.
           </p>
         </div>
@@ -54,9 +54,9 @@ export function HowItWorksSection() {
           {/* Step 1: Define Research */}
           <div
             data-how-card
-            className="relative min-h-[380px] overflow-hidden rounded-3xl bg-zinc-950 ring-1 ring-white/10 p-6 hover-lift border-gradient"
+            className="relative min-h-[380px] overflow-hidden rounded-3xl liquid-glass-card p-6 hover-lift"
           >
-            <span className="absolute top-6 right-6 text-xs text-zinc-500 font-mono">
+            <span className="absolute top-6 right-6 text-xs text-zinc-500 dark:text-zinc-500 font-mono">
               01
             </span>
             <div className="relative z-10">
@@ -73,10 +73,10 @@ export function HowItWorksSection() {
                   <path d="m21 21-4.3-4.3" />
                 </svg>
               </div>
-              <h3 className="text-xl text-zinc-100 font-medium tracking-tight">
+              <h3 className="text-xl text-zinc-900 dark:text-zinc-100 font-medium tracking-tight">
                 Define Research
               </h3>
-              <p className="text-sm text-zinc-400 mt-2">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
                 Describe your research topic in natural language — ARIA handles
                 the rest.
               </p>
@@ -84,8 +84,8 @@ export function HowItWorksSection() {
 
             {/* Orbit visual */}
             <div className="absolute bottom-8 right-8 w-32 h-32">
-              <div className="absolute inset-0 rounded-full ring-1 ring-white/5" />
-              <div className="absolute inset-4 rounded-full ring-1 ring-white/5" />
+              <div className="absolute inset-0 rounded-full ring-1 ring-black/5 dark:ring-white/5" />
+              <div className="absolute inset-4 rounded-full ring-1 ring-black/5 dark:ring-white/5" />
               <div
                 className="absolute inset-0"
                 style={{ animation: "orbit 8s linear infinite" }}
@@ -104,9 +104,9 @@ export function HowItWorksSection() {
           {/* Step 2: Agents Execute */}
           <div
             data-how-card
-            className="relative min-h-[380px] overflow-hidden rounded-3xl bg-zinc-950 ring-1 ring-white/10 p-6 hover-lift border-gradient"
+            className="relative min-h-[380px] overflow-hidden rounded-3xl liquid-glass-card p-6 hover-lift"
           >
-            <span className="absolute top-6 right-6 text-xs text-zinc-500 font-mono">
+            <span className="absolute top-6 right-6 text-xs text-zinc-500 dark:text-zinc-500 font-mono">
               02
             </span>
             <div className="relative z-10">
@@ -122,17 +122,17 @@ export function HowItWorksSection() {
                   <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
                 </svg>
               </div>
-              <h3 className="text-xl text-zinc-100 font-medium tracking-tight">
+              <h3 className="text-xl text-zinc-900 dark:text-zinc-100 font-medium tracking-tight">
                 Agents Execute
               </h3>
-              <p className="text-sm text-zinc-400 mt-2">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
                 Researcher, Analyst, Grader, and Writer agents work in parallel
                 pipeline.
               </p>
             </div>
 
             {/* Steps list */}
-            <div className="mt-8 space-y-1">
+            <div className="mt-8 space-y-1.5">
               {[
                 { label: "Web search & scraping", delay: "0s" },
                 { label: "Vector retrieval", delay: "3s" },
@@ -140,10 +140,10 @@ export function HowItWorksSection() {
               ].map((step, i) => (
                 <div
                   key={step.label}
-                  className="animate-step-cycle flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-300"
+                  className="animate-step-cycle flex items-center gap-3 px-3 py-2 rounded-lg ring-1 ring-black/5 dark:ring-white/10 bg-white/80 dark:bg-zinc-900/80 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300"
                   style={{ animationDelay: step.delay }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 shrink-0" />
                   {step.label}
                 </div>
               ))}
@@ -153,9 +153,9 @@ export function HowItWorksSection() {
           {/* Step 3: Verified Report */}
           <div
             data-how-card
-            className="relative min-h-[380px] overflow-hidden rounded-3xl bg-zinc-950 ring-1 ring-white/10 p-6 hover-lift border-gradient"
+            className="relative min-h-[380px] overflow-hidden rounded-3xl liquid-glass-card p-6 hover-lift"
           >
-            <span className="absolute top-6 right-6 text-xs text-zinc-500 font-mono">
+            <span className="absolute top-6 right-6 text-xs text-zinc-500 dark:text-zinc-500 font-mono">
               03
             </span>
             <div className="relative z-10">
@@ -172,10 +172,10 @@ export function HowItWorksSection() {
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
-              <h3 className="text-xl text-zinc-100 font-medium tracking-tight">
+              <h3 className="text-xl text-zinc-900 dark:text-zinc-100 font-medium tracking-tight">
                 Verified Report
               </h3>
-              <p className="text-sm text-zinc-400 mt-2">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
                 Get a comprehensive report with citations, executive summary,
                 and key insights.
               </p>
@@ -213,7 +213,7 @@ export function HowItWorksSection() {
                 />
               </svg>
               <div className="flex items-center justify-between mt-2">
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-500">
                   Report Quality
                 </span>
                 <span

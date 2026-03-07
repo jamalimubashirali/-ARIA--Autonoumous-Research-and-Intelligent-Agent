@@ -15,13 +15,20 @@ export function fadeUp(
   element: gsap.TweenTarget,
   options?: { delay?: number; duration?: number; y?: number },
 ) {
-  return gsap.from(element, {
-    y: options?.y ?? 40,
-    opacity: 0,
-    duration: options?.duration ?? 0.8,
-    delay: options?.delay ?? 0,
-    ease: "power3.out",
-  });
+  return gsap.fromTo(
+    element,
+    {
+      y: options?.y ?? 40,
+      opacity: 0,
+    },
+    {
+      y: 0,
+      opacity: 1,
+      duration: options?.duration ?? 0.8,
+      delay: options?.delay ?? 0,
+      ease: "power3.out",
+    },
+  );
 }
 
 /**
@@ -31,13 +38,20 @@ export function staggerIn(
   elements: gsap.TweenTarget,
   options?: { stagger?: number; duration?: number; y?: number },
 ) {
-  return gsap.from(elements, {
-    y: options?.y ?? 30,
-    opacity: 0,
-    duration: options?.duration ?? 0.6,
-    stagger: options?.stagger ?? 0.1,
-    ease: "power3.out",
-  });
+  return gsap.fromTo(
+    elements,
+    {
+      y: options?.y ?? 30,
+      opacity: 0,
+    },
+    {
+      y: 0,
+      opacity: 1,
+      duration: options?.duration ?? 0.6,
+      stagger: options?.stagger ?? 0.1,
+      ease: "power3.out",
+    },
+  );
 }
 
 /**

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/api";
+import { useAuth } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import NotionMarkdown from "@/components/notion-markdown";
 import { format } from "date-fns";
@@ -42,6 +43,7 @@ export default function ReportDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const { fetch } = useApiClient();
+  const { isLoaded, isSignedIn } = useAuth();
 
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,8 @@ export default function ReportDetailPage() {
   const [shareLink, setShareLink] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+
     async function loadReport() {
       try {
         const res = await fetch(`/api/v1/reports/${id}`);
@@ -71,7 +75,7 @@ export default function ReportDetailPage() {
     if (id) {
       loadReport();
     }
-  }, [id, fetch]);
+  }, [id, fetch, isLoaded, isSignedIn]);
 
   const handleExportPDF = async () => {
     setIsExporting(true);

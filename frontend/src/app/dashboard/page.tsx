@@ -70,10 +70,10 @@ function getDomainColor(domain: string) {
 export default function DashboardPage() {
   const api = useApiClient();
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [recentCount, setRecentCount] = useState<number>(0);
+  const [totalReports, setTotalReports] = useState<number>(0);
   const [reports, setReports] = useState<Report[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -84,6 +84,8 @@ export default function DashboardPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+
     async function loadData() {
       try {
         // Try usage endpoint first, fall back gracefully
@@ -102,7 +104,7 @@ export default function DashboardPage() {
         if (reportsRes.ok) {
           const data = await reportsRes.json();
           setReports(data.data || []);
-          setRecentCount(data.data?.length || 0);
+          setTotalReports(data.total || data.data?.length || 0);
         }
       } catch {
         // Ignore
@@ -111,7 +113,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     loadData();
-  }, [api]);
+  }, [api, isLoaded, isSignedIn]);
 
   // GSAP stagger animation on cards
   useGSAP(
@@ -182,7 +184,10 @@ export default function DashboardPage() {
               <div>
                 <div className="text-5xl font-bold tracking-tight text-foreground">
                   <AnimatedCounter
-                    value={usage?.reports_this_month ?? recentCount}
+                    value={Math.max(
+                      usage?.reports_this_month || 0,
+                      totalReports,
+                    )}
                   />
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -303,15 +308,15 @@ export default function DashboardPage() {
                 )}
 
                 <CardFooter className="mt-auto relative pt-4 pb-4 border-t border-border/50 dark:border-white/5 flex justify-end flex-none z-10">
-                    <Link href={`/dashboard/reports/${report.id}`}>
-                      <GlassActionButton
-                        glowColor="cyan"
-                        className="px-6 py-3 !rounded-full font-semibold"
-                      >
-                        Open Report
-                        <ArrowRight className="w-4 h-4 ml-1.5 group-hover/btn:translate-x-1 transition-transform" />
-                      </GlassActionButton>
-                    </Link>
+                  <Link href={`/dashboard/reports/${report.id}`}>
+                    <GlassActionButton
+                      glowColor="cyan"
+                      className="px-6 py-3 !rounded-full font-semibold"
+                    >
+                      Open Report
+                      <ArrowRight className="w-4 h-4 ml-1.5 group-hover/btn:translate-x-1 transition-transform" />
+                    </GlassActionButton>
+                  </Link>
                 </CardFooter>
               </Card>
             ))}

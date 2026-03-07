@@ -53,32 +53,24 @@ export function PricingSection() {
     >
       <div className="max-w-5xl mx-auto">
         <div data-price-heading className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light text-zinc-100 tracking-tighter mb-4">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light text-zinc-900 dark:text-zinc-100 tracking-tighter mb-4">
             Simple, transparent pricing
           </h2>
-          <p className="text-lg text-zinc-400 max-w-xl mx-auto mb-8">
+          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto mb-8">
             Start free. Upgrade when your research demands it.
           </p>
 
           {/* Toggle */}
-          <div className="inline-flex items-center gap-3 bg-zinc-900 ring-1 ring-white/10 rounded-full p-1">
+          <div className="inline-flex items-center gap-3 bg-zinc-50 dark:bg-zinc-900 ring-1 ring-black/5 dark:ring-white/10 rounded-full p-1">
             <button
               onClick={() => setIsYearly(false)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                !isYearly
-                  ? "bg-white text-black"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${!isYearly ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}
             >
               Monthly
             </button>
             <button
               onClick={() => setIsYearly(true)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                isYearly
-                  ? "bg-white text-black"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${isYearly ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}
             >
               Yearly
               <span className="ml-1.5 text-[10px] text-emerald-400 font-semibold">
@@ -92,24 +84,24 @@ export function PricingSection() {
           {/* Starter */}
           <div
             data-price-card
-            className="relative rounded-3xl bg-zinc-950 ring-1 ring-white/10 p-8 border-gradient hover-lift"
+            className="relative rounded-3xl liquid-glass-card p-8 hover-lift"
           >
-            <h3 className="text-xl text-zinc-100 font-medium tracking-tight">
+            <h3 className="text-xl text-zinc-900 dark:text-zinc-100 font-medium tracking-tight">
               Starter
             </h3>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">
               For individuals exploring AI research.
             </p>
             <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-5xl font-light text-zinc-100">
+              <span className="text-5xl font-light text-zinc-900 dark:text-zinc-100">
                 ${isYearly ? plans.starter.yearly : plans.starter.monthly}
               </span>
-              <span className="text-zinc-500 text-sm">
+              <span className="text-zinc-500 dark:text-zinc-500 text-sm">
                 /{isYearly ? "year" : "month"}
               </span>
             </div>
             <Link href="/sign-up">
-              <button className="mt-6 w-full py-3 rounded-full bg-white/10 ring-1 ring-white/15 text-white text-sm font-medium hover:bg-white/15 transition">
+              <button className="mt-6 w-full py-3 rounded-full bg-black/5 dark:bg-white/5 dark:bg-white/10 ring-1 ring-white/15 text-zinc-900 dark:text-white text-sm font-medium hover:bg-black/10 hover:dark:bg-white/15 transition">
                 Get Started Free
               </button>
             </Link>
@@ -122,11 +114,11 @@ export function PricingSection() {
               ].map((item) => (
                 <li
                   key={item}
-                  className="flex items-center gap-3 text-sm text-zinc-300"
+                  className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4 text-zinc-500 shrink-0"
+                    className="w-4 h-4 text-zinc-500 dark:text-zinc-500 shrink-0"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -143,30 +135,30 @@ export function PricingSection() {
           {/* Pro */}
           <div
             data-price-card
-            className="relative rounded-3xl bg-zinc-950 ring-2 ring-blue-500/50 p-8 border-gradient hover-lift shadow-lg shadow-blue-500/10"
+            className="relative rounded-3xl liquid-glass-card ring-2 ring-blue-500/50 p-8 hover-lift shadow-lg shadow-blue-500/10"
           >
             <div className="absolute top-6 right-6">
               <span className="text-[10px] text-blue-200 bg-blue-500/20 ring-1 ring-blue-500/30 rounded-full px-3 py-1 font-semibold">
                 POPULAR
               </span>
             </div>
-            <h3 className="text-xl text-zinc-100 font-medium tracking-tight">
+            <h3 className="text-xl text-zinc-900 dark:text-zinc-100 font-medium tracking-tight">
               Pro
             </h3>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">
               For teams that need deep, verified research.
             </p>
             <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-5xl font-light text-zinc-100">
+              <span className="text-5xl font-light text-zinc-900 dark:text-zinc-100">
                 ${isYearly ? plans.pro.yearly : plans.pro.monthly}
               </span>
-              <span className="text-zinc-500 text-sm">
+              <span className="text-zinc-500 dark:text-zinc-500 text-sm">
                 /{isYearly ? "year" : "month"}
               </span>
             </div>
             <Link href="/sign-up">
               <button
-                className="mt-6 w-full py-3 rounded-full text-white text-sm font-medium transition shadow-lg shadow-blue-500/20 hover:brightness-110"
+                className="mt-6 w-full py-3 rounded-full text-zinc-900 dark:text-white text-sm font-medium transition shadow-lg shadow-blue-500/20 hover:brightness-110"
                 style={{
                   background:
                     "linear-gradient(45deg, #06b6d4, #3b82f6, #2563eb)",
@@ -186,7 +178,7 @@ export function PricingSection() {
               ].map((item) => (
                 <li
                   key={item}
-                  className="flex items-center gap-3 text-sm text-zinc-300"
+                  className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

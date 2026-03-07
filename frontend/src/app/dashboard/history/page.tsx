@@ -23,6 +23,7 @@ import { useGSAP } from "@gsap/react";
 import { staggerIn } from "@/lib/gsap-config";
 import { format } from "date-fns";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 
 interface Report {
   id: string;
@@ -51,12 +52,15 @@ function getDomainColor(domain: string) {
 
 export default function HistoryPage() {
   const { fetch } = useApiClient();
+  const { isLoaded, isSignedIn } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+
     async function loadReports() {
       try {
         const res = await fetch("/api/v1/reports?limit=50");
@@ -72,7 +76,7 @@ export default function HistoryPage() {
       }
     }
     loadReports();
-  }, [fetch]);
+  }, [fetch, isLoaded, isSignedIn]);
 
   // GSAP stagger animation
   useGSAP(

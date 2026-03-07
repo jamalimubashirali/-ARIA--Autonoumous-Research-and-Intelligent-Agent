@@ -142,9 +142,9 @@
 .shimmer-skeleton {
   background: linear-gradient(
     90deg,
-    oklch(0.18 0.015 265) 25%,
-    oklch(0.24 0.02 265) 50%,
-    oklch(0.18 0.015 265) 75%
+    var(--muted) 25%,
+    color-mix(in oklch, var(--muted), var(--foreground) 10%) 50%,
+    var(--muted) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
@@ -352,7 +352,7 @@
   background: radial-gradient(
     ellipse at 50% 120%,
     transparent 20%,
-    #050505 85%
+    var(--background) 85%
   );
 }
 
@@ -400,6 +400,13 @@
   100% {
     transform: translateX(-50%);
   }
+}
+
+.animate-marquee {
+  animation: marquee-scroll 40s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
 }
 
 /* Chat animations */
@@ -583,16 +590,29 @@
   }
 }
 
+:root {
+  --hover-pulse-bg-start: rgba(255, 255, 255, 0.8);
+  --hover-pulse-border-start: rgba(0, 0, 0, 0.1);
+  --hover-pulse-bg-mid: rgba(241, 245, 249, 0.8);
+  --hover-pulse-border-mid: rgba(59, 130, 246, 0.3);
+  --step-anim-bg: rgba(244, 244, 245, 1);
+}
+.dark {
+  --hover-pulse-bg-start: rgba(9, 9, 11, 0.8);
+  --hover-pulse-border-start: rgba(255, 255, 255, 0.1);
+  --hover-pulse-bg-mid: rgba(30, 41, 59, 0.8);
+  --hover-pulse-border-mid: rgba(59, 130, 246, 0.3);
+  --step-anim-bg: rgba(38, 38, 38, 1);
+}
+
 /* Template hover pulse */
 @keyframes hover-pulse {
   0%,
   100% {
-    background-color: rgba(9, 9, 11, 0.8);
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--hover-pulse-border-start);
   }
   50% {
-    background-color: rgba(30, 41, 59, 0.8);
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: var(--hover-pulse-border-mid);
   }
 }
 
@@ -602,13 +622,11 @@
   30% {
     opacity: 1;
     transform: translateX(6px);
-    background-color: rgba(38, 38, 38, 1);
   }
   36%,
   100% {
     opacity: 0.4;
     transform: translateX(0);
-    background-color: transparent;
   }
 }
 @keyframes active-content-reveal {
@@ -745,3 +763,51 @@
 .animate-content-cycle {
   animation: active-content-reveal 9s ease-in-out infinite;
 }
+
+/* Liquid glass aesthetic - precisely matching Navbar */
+.liquid-glass-card {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 1.5rem; /* Default 24px, can be overridden */
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.liquid-glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Light mode */
+:root .liquid-glass-card::before,
+.light .liquid-glass-card::before,
+[data-theme="light"] .liquid-glass-card::before {
+  background-color: rgba(255, 255, 255, 0.82);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode */
+.dark .liquid-glass-card::before,
+[data-theme="dark"] .liquid-glass-card::before {
+  background-color: rgba(23, 23, 23, 0.88);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* End of liquid-glass-card styles */

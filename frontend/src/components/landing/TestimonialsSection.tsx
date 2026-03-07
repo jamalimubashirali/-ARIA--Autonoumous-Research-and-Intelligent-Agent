@@ -3,30 +3,31 @@
 import { useRef, useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Image from "next/image";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const testimonials = [
   {
-    name: "Sarah Chen",
-    role: "VP of Research, DataVault",
-    text: "ARIA replaced our entire 6-person research team's first-pass workflow. Reports that took 3 days now take 15 minutes.",
-    avatar: "SC",
-    gradient: "from-blue-600 to-cyan-600",
+    name: "J. Amander",
+    role: "CEO of Orix Agency",
+    text: "DesignFlow was exactly what our startup needed. We launched our production website in days, not months — critical for early market entry.",
+    avatar:
+      "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=150&h=150",
   },
   {
-    name: "Marcus Rivera",
-    role: "Strategy Director, NexaTech",
-    text: "The corrective RAG system is genuinely magical. Every citation is verified, every claim is grounded. We've never had this confidence in AI outputs before.",
-    avatar: "MR",
-    gradient: "from-violet-600 to-purple-600",
+    name: "A. Levine",
+    role: "CEO of Creative Agency",
+    text: "The perfect balance of stunning aesthetics and real-world functionality. If you want high-impact results without the custom build hassle, this is it.",
+    avatar:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150",
   },
   {
-    name: "Emily Zhang",
-    role: "Product Lead, CloudForge",
-    text: "We integrated ARIA into our product planning pipeline. Competitive analyses that felt like guesswork now come with real data and real sources.",
-    avatar: "EZ",
-    gradient: "from-emerald-600 to-teal-600",
+    name: "G. Alexander",
+    role: "CEO of Capital Agency",
+    text: "As a digital artist, aesthetics are everything. The dark UI and subtle animations make my portfolio pop beautifully without distracting from my work.",
+    avatar:
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150&h=150",
   },
 ];
 
@@ -57,63 +58,68 @@ export function TestimonialsSection() {
       className="w-full px-4 py-24 relative z-10"
     >
       <div className="max-w-7xl mx-auto">
-        <div data-test-heading className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light text-zinc-100 tracking-tighter mb-4">
-            Trusted by research teams
+        <div data-test-heading className="mb-16">
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-sm mb-8">
+            <span className="text-sm font-medium text-zinc-600 dark:text-white/60">
+              Testimonials
+            </span>
+          </div>
+
+          <h2 className="text-5xl sm:text-6xl lg:text-7xl font-medium tracking-tight mb-6">
+            <span className="text-zinc-900 dark:text-white">
+              Loved by designers,
+            </span>
+            <br />
+            <span className="text-blue-400">trusted by teams</span>
           </h2>
-          <p className="text-lg text-zinc-400 max-w-xl mx-auto">
-            See how industry leaders are transforming their research workflows
-            with ARIA.
+          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
+            Real results from real teams — faster reviews, cleaner handoff, and
+            a smoother path from idea to shipped UI.
           </p>
         </div>
 
-        {/* Marquee */}
-        <div className="relative overflow-hidden">
-          {/* Gradient masks */}
-          <div className="absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-zinc-950 to-transparent pointer-events-none" />
-          <div className="absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-zinc-950 to-transparent pointer-events-none" />
+        {/* The big container */}
+        <div className="relative p-6 sm:p-8 rounded-[2rem] liquid-glass-card overflow-hidden">
+          {/* Gradient masks for smooth marquee edges */}
+          <div className="absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-white/80 dark:from-zinc-950/80 to-transparent pointer-events-none" />
+          <div className="absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-white/80 dark:from-zinc-950/80 to-transparent pointer-events-none" />
 
+          {/* Marquee */}
           <div
-            className="flex gap-4 hover:[animation-play-state:paused]"
+            className="flex gap-6 hover:[animation-play-state:paused]"
             style={{
-              animation: "marquee-scroll 30s linear infinite",
+              animation: "marquee-scroll 40s linear infinite",
               width: "fit-content",
             }}
           >
             {/* Duplicate for seamless loop */}
-            {[...testimonials, ...testimonials].map((t, i) => (
+            {[...testimonials, ...testimonials, ...testimonials].map((t, i) => (
               <div
                 key={`${t.name}-${i}`}
-                className="flex-shrink-0 w-[400px] p-6 rounded-3xl bg-zinc-950 ring-1 ring-white/10 border-gradient"
+                className="flex-shrink-0 w-[400px] sm:w-[420px] p-8 rounded-3xl liquid-glass-card flex flex-col justify-between"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div
-                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center text-white text-sm font-bold`}
-                  >
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <p className="text-sm text-zinc-100 font-medium">
-                      {t.name}
-                    </p>
-                    <p className="text-xs text-zinc-500">{t.role}</p>
-                  </div>
+                <div className="flex justify-between items-start mb-8">
+                  <span className="text-zinc-600 font-serif text-6xl leading-none h-8 mt-2">
+                    &ldquo;
+                  </span>
+                  <img
+                    src={t.avatar}
+                    alt={t.name}
+                    className="w-14 h-14 rounded-2xl object-cover grayscale opacity-80"
+                  />
                 </div>
-                <p className="text-sm text-zinc-300 leading-relaxed">
-                  &ldquo;{t.text}&rdquo;
+
+                <p className="text-zinc-700 dark:text-zinc-300 text-lg leading-relaxed mb-12 font-medium">
+                  {t.text}
                 </p>
-                <div className="flex gap-1 mt-4">
-                  {[...Array(5)].map((_, j) => (
-                    <svg
-                      key={j}
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-4 h-4 text-yellow-500"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                  ))}
+
+                <div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-500 mb-1 font-medium">
+                    {t.role}
+                  </p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 font-bold">
+                    {t.name}
+                  </p>
                 </div>
               </div>
             ))}

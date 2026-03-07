@@ -25,15 +25,15 @@ export function Navbar() {
         ref={navRef}
         className="fixed -translate-x-1/2 z-50 w-[min(100%-1rem,1100px)] pointer-events-none top-4 left-1/2"
       >
-        <div className="pointer-events-auto border-border border rounded-full ring-1 ring-border/50 dark:border-white/15 dark:ring-white/15 pr-2 pl-6 relative shadow-lg shadow-black/5 dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-2xl bg-background/80 dark:bg-neutral-900/70">
+        <div className="pointer-events-auto border border-border/50 rounded-full ring-1 ring-border/50 dark:border-white/15 dark:ring-white/15 pr-2 pl-6 relative shadow-lg shadow-black/5 dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-2xl bg-white/70 dark:bg-neutral-900/70">
           {/* Noise overlay */}
           <span
             aria-hidden="true"
-            className="pointer-events-none bg-neutral-900/75 rounded-full absolute inset-0"
+            className="pointer-events-none bg-white/50 dark:bg-neutral-900/75 rounded-full absolute inset-0"
           />
           <span
             aria-hidden="true"
-            className="pointer-events-none opacity-[0.06] rounded-full absolute inset-0 noise-overlay"
+            className="pointer-events-none opacity-[0.04] dark:opacity-[0.06] rounded-full absolute inset-0 noise-overlay"
           />
           <div className="relative">
             <div className="flex h-14 items-center justify-between relative">

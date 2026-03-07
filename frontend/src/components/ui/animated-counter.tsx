@@ -13,7 +13,7 @@ interface AnimatedCounterProps {
 
 export function AnimatedCounter({
   value,
-  duration = 1.5,
+  duration = 1.2,
   suffix = "",
   className = "",
 }: AnimatedCounterProps) {
@@ -23,21 +23,28 @@ export function AnimatedCounter({
   useGSAP(() => {
     if (!ref.current || value === prevValue.current) return;
 
+    // Fast-forward animation if difference is just 1 or 2
+    const currentDuration =
+      Math.abs(value - prevValue.current) <= 2 ? 0.6 : duration;
+
     const obj = { val: prevValue.current };
     gsap.to(obj, {
       val: value,
-      duration,
+      duration: currentDuration,
       ease: "power2.out",
       onUpdate: () => {
         if (ref.current) {
-          ref.current.textContent = Math.floor(obj.val).toString() + suffix;
+          ref.current.textContent = Math.round(obj.val).toString() + suffix;
         }
       },
       onComplete: () => {
+        if (ref.current) {
+          ref.current.textContent = value.toString() + suffix;
+        }
         prevValue.current = value;
       },
     });
-  }, [value]);
+  }, [value, duration, suffix]);
 
   return (
     <span ref={ref} className={className}>

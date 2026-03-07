@@ -5,28 +5,28 @@ import Link from "next/link";
 export function Footer() {
   return (
     <footer className="w-full px-4 py-16 relative z-10">
-      <div className="max-w-7xl mx-auto rounded-3xl bg-zinc-950/80 ring-1 ring-white/10 border-gradient backdrop-blur-2xl p-10 sm:p-12">
+      <div className="max-w-7xl mx-auto rounded-3xl liquid-glass-card p-10 sm:p-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link
               href="/"
-              className="text-white font-semibold text-lg tracking-tight"
+              className="text-zinc-900 dark:text-white font-semibold text-lg tracking-tight"
             >
               ARIA
             </Link>
-            <p className="text-sm text-zinc-500 mt-3 max-w-xs">
+            <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-3 max-w-xs">
               Autonomous Research & Intelligent Agent. Transform raw web data
               into executive-grade research reports.
             </p>
             <div className="flex gap-3 mt-6">
               <a
                 href="#"
-                className="w-9 h-9 rounded-full bg-zinc-800 ring-1 ring-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition"
+                className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-1 ring-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-4 h-4 text-zinc-300"
+                  className="w-4 h-4 text-zinc-700 dark:text-zinc-300"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
@@ -35,11 +35,11 @@ export function Footer() {
               </a>
               <a
                 href="#"
-                className="w-9 h-9 rounded-full bg-zinc-800 ring-1 ring-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition"
+                className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-1 ring-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-4 h-4 text-zinc-300"
+                  className="w-4 h-4 text-zinc-700 dark:text-zinc-300"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
@@ -48,11 +48,11 @@ export function Footer() {
               </a>
               <a
                 href="#"
-                className="w-9 h-9 rounded-full bg-zinc-800 ring-1 ring-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition"
+                className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-1 ring-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-4 h-4 text-zinc-300"
+                  className="w-4 h-4 text-zinc-700 dark:text-zinc-300"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
@@ -64,12 +64,14 @@ export function Footer() {
 
           {/* Links */}
           <div>
-            <h4 className="text-sm text-zinc-100 font-medium mb-4">Product</h4>
+            <h4 className="text-sm text-zinc-900 dark:text-zinc-100 font-medium mb-4">
+              Product
+            </h4>
             <ul className="space-y-3">
               <li>
                 <a
                   href="#features"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Features
                 </a>
@@ -77,7 +79,7 @@ export function Footer() {
               <li>
                 <a
                   href="#pricing"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Pricing
                 </a>
@@ -85,7 +87,7 @@ export function Footer() {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Changelog
                 </a>
@@ -93,7 +95,7 @@ export function Footer() {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Documentation
                 </a>
@@ -102,12 +104,14 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="text-sm text-zinc-100 font-medium mb-4">Company</h4>
+            <h4 className="text-sm text-zinc-900 dark:text-zinc-100 font-medium mb-4">
+              Company
+            </h4>
             <ul className="space-y-3">
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   About
                 </a>
@@ -115,7 +119,7 @@ export function Footer() {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Blog
                 </a>
@@ -123,7 +127,7 @@ export function Footer() {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Careers
                 </a>
@@ -131,7 +135,7 @@ export function Footer() {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Contact
                 </a>
@@ -140,12 +144,14 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="text-sm text-zinc-100 font-medium mb-4">Legal</h4>
+            <h4 className="text-sm text-zinc-900 dark:text-zinc-100 font-medium mb-4">
+              Legal
+            </h4>
             <ul className="space-y-3">
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Privacy
                 </a>
@@ -153,7 +159,7 @@ export function Footer() {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Terms
                 </a>
@@ -161,7 +167,7 @@ export function Footer() {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition"
+                  className="text-sm text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 hover:dark:text-zinc-300 transition"
                 >
                   Cookies
                 </a>
@@ -171,13 +177,13 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-zinc-600">
+        <div className="mt-12 pt-8 border-t border-black/10 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-zinc-500 dark:text-zinc-500 dark:text-zinc-600">
             &copy; {new Date().getFullYear()} ARIA. All rights reserved.
           </p>
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-zinc-500 dark:text-zinc-500">
               All systems operational
             </span>
           </div>
