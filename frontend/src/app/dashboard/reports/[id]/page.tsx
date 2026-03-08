@@ -204,13 +204,13 @@ export default function ReportDetailPage() {
 
       {/* Document */}
       <Card className="glow-card gradient-border border-border/30 bg-card/60 backdrop-blur-xl shadow-xl overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-primary/60 via-chart-4/30 to-transparent" />
+        <div className="h-[3px] bg-gradient-to-r from-cyan-500/60 via-cyan-500/30 to-transparent" />
 
         {/* Document Header */}
         <div className="px-6 sm:px-10 md:px-14 pt-10 pb-6 border-b border-border/20">
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs font-semibold tracking-wider uppercase text-primary bg-primary/10 px-3 py-1 rounded-full flex items-center">
-              <Sparkles className="w-3 h-3 mr-1" />
+            <span className="text-xs font-semibold tracking-wider uppercase text-cyan-600 bg-cyan-500/10 px-3 py-1 rounded-full flex items-center">
+              <Sparkles className="w-3 h-3 mr-1 text-cyan-600" />
               {report.domain}
             </span>
           </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
 
 export function Navbar() {
   const navRef = useRef<HTMLDivElement>(null);
@@ -70,23 +71,10 @@ export function Navbar() {
               {/* Actions */}
               <div className="flex items-center gap-3">
                 <ThemeToggle />
-                <Link href="/sign-in">
-                  <button className="hidden sm:inline-flex group relative items-center justify-center min-w-[120px] px-5 py-2.5 text-sm font-semibold tracking-tight cursor-pointer overflow-hidden rounded-full border border-primary/20 dark:border-white/15 bg-primary/10 dark:bg-white/10 text-primary dark:text-neutral-100 transition-all duration-[900ms] ease-[cubic-bezier(0.15,0.83,0.66,1)] hover:-translate-y-[2px] hover:text-primary-foreground dark:hover:text-white hover:bg-primary dark:hover:bg-white/20">
-                    <span className="relative z-10 transition-all duration-500 ease-out group-hover:translate-y-full group-hover:opacity-0">
-                      Sign In
-                    </span>
-                    <span className="absolute inset-0 z-10 flex items-center justify-center font-medium opacity-0 transition-all duration-500 ease-out translate-y-full group-hover:translate-y-0 group-hover:opacity-100">
-                      Sign In
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="absolute bottom-0 left-1/2 h-[1px] w-[70%] -translate-x-1/2 rounded-full bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent opacity-70 blur-[2px]"
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-t from-white/15 via-white/10 to-transparent"
-                    />
-                  </button>
+                <Link href="/sign-in" tabIndex={-1}>
+                  <Button className="hidden sm:inline-flex min-w-[120px]">
+                    Sign In
+                  </Button>
                 </Link>
                 {/* Mobile menu button */}
                 <button className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-full bg-muted border border-border text-foreground hover:bg-muted/80 dark:bg-white/15 dark:border-white/20 dark:text-zinc-100 dark:hover:bg-white/20">

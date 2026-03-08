@@ -228,61 +228,69 @@ async def analyst_node(state: ResearchState) -> dict:
         print(f"  [CRAG] Graded: {len(relevant_chunks)} relevant, {irrelevant_count} irrelevant")
 
         # ---- Step 3: Rewrite query if >50% irrelevant ----
+        has_web_data = len(state.get("search_results", [])) > 0 or len(state.get("scraped_content", [])) > 0
+        
         if irrelevant_count > len(retrieved) / 2:
-            print("  [CRAG] Step 3: >50% irrelevant - checking if vector retry is viable...")
-            vote_chain = _build_retry_vote_chain()
-            is_viable = True
-            try:
-                vote = vote_chain.invoke({"query": query, "domain": domain})
-                p, c = extract_tokens(vote)
-                get_token_tracker().add(p, c)
-                is_viable = vote.should_retry
-                print(f"  [CRAG] Vector retry vote: {vote.should_retry} ({vote.reason})")
-            except Exception as e:
-                print(f"  [CRAG] Vote failed, defaulting to retry: {e}")
-
-            if is_viable:
-                print("  [CRAG] Rewriting query...")
-                rewrite_chain = _build_rewrite_chain()
-
-                try:
-                    rewrite = rewrite_chain.invoke({
-                        "query": query,
-                        "domain": domain,
-                        "irrelevant_count": irrelevant_count,
-                        "total_count": len(retrieved),
-                    })
-                    p, c = extract_tokens(rewrite)
-                    get_token_tracker().add(p, c)
-                    rewritten_query = rewrite.rewritten_query
-                    rag_query_rewrites = 1
-                    print(f"  [CRAG] Rewritten query: '{rewritten_query}'")
-
-                    # Re-retrieve with improved query
-                    re_retrieved = await vector_search(rewritten_query, domain, limit=8)
-                    print(f"  [CRAG] Re-retrieved {len(re_retrieved)} chunks")
-
-                    # Filter out duplicates before re-grading
-                    seen_ids = {rc["id"] for rc in relevant_chunks}
-                    new_chunks = [c for c in re_retrieved if c["id"] not in seen_ids]
-
-                    if new_chunks:
-                        new_grades = await asyncio.gather(*[_grade_chunk(chunk, rewritten_query) for chunk in new_chunks])
-                        relevant_chunks += [c for c, g in zip(new_chunks, new_grades) if g.relevant]
-
-                    print(f"  [CRAG] After rewrite: {len(relevant_chunks)} total relevant chunks")
-
-                except Exception as e:
-                    print(f"  [CRAG] Query rewrite failed: {e}")
+            if has_web_data:
+                print("  [CRAG] Step 3: >50% irrelevant, but sufficient web search data already exists. Skipping vector retry to save costs/time.")
             else:
-                print("  [CRAG] Skipping vector retry due to negative vote.")
+                print("  [CRAG] Step 3: >50% irrelevant - checking if vector retry is viable...")
+                vote_chain = _build_retry_vote_chain()
+                is_viable = True
+                try:
+                    vote = vote_chain.invoke({"query": query, "domain": domain})
+                    p, c = extract_tokens(vote)
+                    get_token_tracker().add(p, c)
+                    is_viable = vote.should_retry
+                    print(f"  [CRAG] Vector retry vote: {vote.should_retry} ({vote.reason})")
+                except Exception as e:
+                    print(f"  [CRAG] Vote failed, defaulting to retry: {e}")
+
+                if is_viable:
+                    print("  [CRAG] Rewriting query...")
+                    rewrite_chain = _build_rewrite_chain()
+
+                    try:
+                        rewrite = rewrite_chain.invoke({
+                            "query": query,
+                            "domain": domain,
+                            "irrelevant_count": irrelevant_count,
+                            "total_count": len(retrieved),
+                        })
+                        p, c = extract_tokens(rewrite)
+                        get_token_tracker().add(p, c)
+                        rewritten_query = rewrite.rewritten_query
+                        rag_query_rewrites = 1
+                        print(f"  [CRAG] Rewritten query: '{rewritten_query}'")
+
+                        # Re-retrieve with improved query
+                        re_retrieved = await vector_search(rewritten_query, domain, limit=8)
+                        print(f"  [CRAG] Re-retrieved {len(re_retrieved)} chunks")
+
+                        # Filter out duplicates before re-grading
+                        seen_ids = {rc["id"] for rc in relevant_chunks}
+                        new_chunks = [c for c in re_retrieved if c["id"] not in seen_ids]
+
+                        if new_chunks:
+                            new_grades = await asyncio.gather(*[_grade_chunk(chunk, rewritten_query) for chunk in new_chunks])
+                            relevant_chunks += [c for c, g in zip(new_chunks, new_grades) if g.relevant]
+
+                        print(f"  [CRAG] After rewrite: {len(relevant_chunks)} total relevant chunks")
+
+                    except Exception as e:
+                        print(f"  [CRAG] Query rewrite failed: {e}")
+                else:
+                    print("  [CRAG] Skipping vector retry due to negative vote.")
 
     # ---- Step 4: Check if more research is needed ----
     research_iterations = state.get("research_iterations", 1)
     extra_search_results: list[dict] = []
     extra_scraped: list[str] = []
     extra_sources: list[dict] = []
-    if len(relevant_chunks) < 2:
+    
+    has_web_data = len(state.get("search_results", [])) > 0 or len(state.get("scraped_content", [])) > 0
+    
+    if len(relevant_chunks) < 2 and not has_web_data:
         # If we haven't hit the max iterations, trigger backward routing to Researcher
         if research_iterations < 2:
             print(f"  [CRAG] Step 4: Insufficient results. Triggering backward loop to Researcher (iteration {research_iterations}/2)...")

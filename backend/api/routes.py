@@ -44,7 +44,7 @@ def _extract_title(report_content: str, fallback_query: str) -> str:
     first_sentence = fallback_query.split('.')[0].strip()
     return first_sentence[:300] if first_sentence else fallback_query[:300]
 
-router = APIRouter()
+router = APIRouter(tags=["research"])
 
 
 class ResearchRequest(BaseModel):

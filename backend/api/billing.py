@@ -15,7 +15,7 @@ from config import settings
 from db.session import get_db
 from db.models import User, Subscription
 
-router = APIRouter()
+router = APIRouter(tags=["stripe"])
 stripe.api_key = settings.stripe_secret_key
 
 

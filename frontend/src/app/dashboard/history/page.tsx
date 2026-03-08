@@ -13,6 +13,7 @@ import {
   FileText,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   Calendar,
   Search,
   History,
@@ -21,6 +22,7 @@ import {
 import { useApiClient } from "@/lib/api";
 import { useGSAP } from "@gsap/react";
 import { staggerIn } from "@/lib/gsap-config";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
@@ -51,6 +53,7 @@ function getDomainColor(domain: string) {
 }
 
 export default function HistoryPage() {
+  const router = useRouter();
   const { fetch } = useApiClient();
   const { isLoaded, isSignedIn } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
@@ -91,21 +94,35 @@ export default function HistoryPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8 mt-4 pb-20">
       {/* Header */}
-      <div className="space-y-2">
-        <div className="inline-flex items-center justify-center p-2.5 rounded-xl bg-primary/10 mb-3">
-          <History className="w-6 h-6 text-primary" />
+      <div className="flex items-center gap-4 mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/dashboard")}
+          className="group hover:bg-cyan-500/10"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+          Back to Terminal
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-2">
+            <History className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
+            Intelligence Archives
+          </h1>
+          <p className="text-muted-foreground text-lg max-w-2xl">
+            Access and manage previously synthesized research reports. Your
+            central repository for agentic insights.
+          </p>
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400">
-          Intelligence Archives
-        </h1>
-        <p className="text-muted-foreground text-lg max-w-xl">
-          Review, export, and manage your agentic research reports.
-        </p>
       </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
         </div>
       ) : error ? (
         <div className="text-center py-20 text-destructive">{error}</div>
@@ -116,8 +133,11 @@ export default function HistoryPage() {
           <p className="text-muted-foreground mb-6">
             Your agent hasn&apos;t completed any research tasks yet.
           </p>
-          <Button asChild className="bg-primary hover:bg-primary/90">
-            <Link href="/dashboard/research">Start New Research</Link>
+          <Button
+            asChild
+            className="bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-semibold shadow-md shadow-cyan-500/20 transition-all"
+          >
+            <Link href="/research">Start New Research</Link>
           </Button>
         </div>
       ) : (
@@ -125,10 +145,11 @@ export default function HistoryPage() {
           {reports.map((report) => (
             <Card
               key={report.id}
-              className="report-card glow-card h-full flex flex-col border-border/30 bg-card/50 backdrop-blur-xl overflow-hidden relative group"
+              className="report-card group bg-white dark:bg-zinc-900/30 backdrop-blur-xl border border-zinc-200 hover:border-zinc-300 dark:border-white/5 dark:hover:border-white/10 shadow-sm dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_8px_20px_rgba(0,0,0,0.2)] hover:shadow-md dark:hover:bg-zinc-900/50 transition-all duration-300 min-h-[240px] flex flex-col overflow-hidden relative"
             >
               {/* Top gradient line */}
-              <div className="h-[2px] bg-gradient-to-r from-primary/60 via-primary/20 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-[100px] bg-gradient-to-b from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/0 to-transparent group-hover:via-cyan-500/50 transition-all duration-500" />
 
               <CardHeader className="relative pb-3 pt-5">
                 <div className="flex items-center justify-between mb-3">
@@ -167,7 +188,7 @@ export default function HistoryPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="group/btn text-muted-foreground hover:text-foreground"
+                  className="group/btn text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 dark:text-cyan-400 dark:hover:text-cyan-300 dark:hover:bg-cyan-950/50 transition-colors font-medium"
                   asChild
                 >
                   <Link href={`/dashboard/reports/${report.id}`}>

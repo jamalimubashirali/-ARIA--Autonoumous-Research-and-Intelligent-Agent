@@ -137,9 +137,10 @@ export default function DashboardPage() {
 
   const handleSubmit = async () => {
     if (!query.trim() || isSubmitting) return;
-    setIsSubmitting(true);
-    // Navigate to research page with query
-    router.push(`/dashboard/research?q=${encodeURIComponent(query.trim())}`);
+    // Store query in sessionStorage to avoid long URL issues
+    sessionStorage.setItem("pending_research_query", query.trim());
+    // Navigate to research page
+    router.push(`/research`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

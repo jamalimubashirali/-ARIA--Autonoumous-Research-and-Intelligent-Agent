@@ -97,7 +97,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             is_limited, remaining = await _is_rate_limited(bucket_key, limit)
         except Exception as e:
             # If Redis connection fails, bypass rate limiting (fail open) rather than bringing down the API
-            print(f"[RateLimiter] Error: {e}")
+            # Silencing the exception log to prevent terminal spam when Redis is not installed locally
             is_limited, remaining = False, limit
 
         if is_limited:

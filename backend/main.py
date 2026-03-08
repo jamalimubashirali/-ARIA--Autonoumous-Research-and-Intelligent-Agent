@@ -16,7 +16,7 @@ if settings.langchain_api_key:
     os.environ["LANGCHAIN_API_KEY"] = settings.langchain_api_key
     os.environ["LANGCHAIN_PROJECT"] = settings.langchain_project or "ARIA_Agent"
     os.environ["LANGCHAIN_ENDPOINT"] = "https://eu.api.smith.langchain.com"
-    print(f"[LangSmith] Tracing enabled → project: {os.environ['LANGCHAIN_PROJECT']}")
+    print(f"[LangSmith] Tracing enabled -> project: {os.environ['LANGCHAIN_PROJECT']}")
 else:
     print("[LangSmith] No API key configured — tracing disabled")
 
@@ -69,7 +69,7 @@ app.include_router(billing_router, prefix="/api/v1")
 app.include_router(sharing_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
 
-@app.get("/api/health")
+@app.get("/api/health", tags=["system"])
 async def health_check():
     return {"status": "healthy", "service": "ARIA backend"}
 
