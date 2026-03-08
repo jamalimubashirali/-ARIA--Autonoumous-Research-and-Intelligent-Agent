@@ -52,9 +52,10 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=clerk_auth_middleware)
 app.add_middleware(RateLimitMiddleware)
 
 # 1. Outermost: CORS (must run before anything else to add headers)
+allowed_origins_list = [origin.strip() for origin in settings.allowed_origins.split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

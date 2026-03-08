@@ -1,29 +1,25 @@
 """
-Rate limiting middleware for ARIA API.
+Rate limiting middleware for ARIA API using Redis.
 
-Uses a simple in-memory sliding window per user (Clerk ID).
+Uses a sliding window per user (Clerk ID) stored in Redis.
 Configurable:
-  - 10 requests per minute for authenticated users
-  - 5 requests per minute for unauthenticated (health check etc.)
+  - 10 requests per minute for expensive AI endpoints
+  - 100 requests per minute for general authenticated traffic
+  - 30 requests per minute for unauthenticated
 """
 import time
-from collections import defaultdict
 from typing import Callable
-
+import redis.asyncio as redis
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from config import settings
 
-# Sliding window storage: {user_key: [timestamp, ...]}
-_request_log: dict[str, list[float]] = defaultdict(list)
+# Initialize Redis client globally
+redis_client = redis.from_url(settings.redis_url, decode_responses=True)
 
-# Config
-RATE_LIMIT_AI = 10               # requests per minute for expensive AI endpoints
-RATE_LIMIT_GENERAL_AUTH = 100    # requests per minute for general authenticated traffic
-RATE_LIMIT_GENERAL_UNAUTH = 30   # requests per minute for unauthenticated
-WINDOW_SECONDS = 60
-
+# Rate limits are pulled directly from `settings` in config.py
 
 
 def _get_user_key(request: Request) -> str:
@@ -39,30 +35,41 @@ def _get_user_key(request: Request) -> str:
     return f"ip:{ip}"
 
 
-def _is_rate_limited(key: str, limit: int) -> tuple[bool, int]:
-    """Check if the key has exceeded its rate limit.
+async def _is_rate_limited(key: str, limit: int) -> tuple[bool, int]:
+    """Check if the key has exceeded its rate limit in Redis.
 
     Returns (is_limited, remaining_requests).
     """
     now = time.time()
-    window_start = now - WINDOW_SECONDS
+    window_start = now - settings.WINDOW_SECONDS
+    redis_key = f"ratelimit:{key}"
 
-    # Clean old entries
-    _request_log[key] = [t for t in _request_log[key] if t > window_start]
-
-    current_count = len(_request_log[key])
+    # Use a pipeline for atomic operations
+    pipeline = redis_client.pipeline()
+    
+    # Remove old entries
+    pipeline.zremrangebyscore(redis_key, 0, window_start)
+    
+    # Add new entry (score and value are both timestamp)
+    pipeline.zadd(redis_key, {str(now): now})
+    
+    # Count requests in window
+    pipeline.zcard(redis_key)
+    
+    # Set TTL on the key so it cleans up entirely if unused
+    pipeline.expire(redis_key, settings.WINDOW_SECONDS)
+    
+    results = await pipeline.execute()
+    current_count = results[2]  # Result of zcard
+    
     remaining = max(0, limit - current_count)
-
-    if current_count >= limit:
+    if current_count > limit:
         return True, 0
-
-    # Record this request
-    _request_log[key].append(now)
-    return False, remaining - 1
+    return False, remaining
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """FastAPI middleware that enforces per-user rate limits."""
+    """FastAPI middleware that enforces per-user rate limits using Redis."""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip rate limiting for health check
@@ -80,23 +87,28 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         is_ai_endpoint = request.url.path.startswith("/api/v1/research")
         
         if is_ai_endpoint:
-            limit = RATE_LIMIT_AI
+            limit = settings.RATE_LIMIT_AI
             bucket_key = f"ai:{key}"
         else:
-            limit = RATE_LIMIT_GENERAL_AUTH if is_authenticated else RATE_LIMIT_GENERAL_UNAUTH
+            limit = settings.RATE_LIMIT_GENERAL_AUTH if is_authenticated else settings.RATE_LIMIT_GENERAL_UNAUTH
             bucket_key = f"gen:{key}"
 
-        is_limited, remaining = _is_rate_limited(bucket_key, limit)
+        try:
+            is_limited, remaining = await _is_rate_limited(bucket_key, limit)
+        except Exception as e:
+            # If Redis connection fails, bypass rate limiting (fail open) rather than bringing down the API
+            print(f"[RateLimiter] Error: {e}")
+            is_limited, remaining = False, limit
 
         if is_limited:
             return JSONResponse(
                 status_code=429,
                 content={
                     "detail": "Rate limit exceeded. Please try again later.",
-                    "retry_after_seconds": WINDOW_SECONDS,
+                    "retry_after_seconds": settings.WINDOW_SECONDS,
                 },
                 headers={
-                    "Retry-After": str(WINDOW_SECONDS),
+                    "Retry-After": str(settings.WINDOW_SECONDS),
                     "X-RateLimit-Limit": str(limit),
                     "X-RateLimit-Remaining": "0",
                 },
