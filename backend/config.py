@@ -3,9 +3,9 @@ from sqlalchemy import URL
 import os
 
 class Settings(BaseSettings):
-    # ==== Azure AI Foundry (LLM) ====
-    azure_openai_api_key: str
-    azure_openai_endpoint: str
+    # ==== Azure AI Foundry (LLM) — Optional if using OpenRouter ====
+    azure_openai_api_key: str = ""
+    azure_openai_endpoint: str = ""
     azure_openai_api_deployment_model_1: str = "Llama-3.3-70B-Instruct"        # Heavy (analyst, writer)
     azure_openai_api_deployment_model_2: str = "Llama-4-Maverick-17B-128E-Instruct-FP8"  # Light (planner)
 
