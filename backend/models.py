@@ -16,31 +16,37 @@ TIER_LIGHT = "light"
 TIER_HEAVY = "heavy"
 
 _MODEL_MAP = {
-    TIER_LIGHT: settings.azure_openai_api_deployment_model_2,  # Maverick 17B
-    TIER_HEAVY: settings.azure_openai_api_deployment_model_1,  # Llama 70B
+    TIER_LIGHT: settings.openrouter_light_model,
+    TIER_HEAVY: settings.openrouter_heavy_model,
 }
 
 def get_llm(tier: str = TIER_HEAVY, temperature: float = 0.0) -> ChatOpenAI:
     if tier not in _MODEL_MAP:
         raise ValueError(f"Invalid model tier '{tier}'. Use '{TIER_LIGHT}' or '{TIER_HEAVY}'.")
 
-    deployment = _MODEL_MAP[tier]
+    model_name = _MODEL_MAP[tier]
 
     try:
         return ChatOpenAI(
-            model=deployment,
-            base_url=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
+            model=model_name,
+            base_url=settings.openrouter_embedding_base_url, # OpenAI compatible
+            api_key=settings.openrouter_api_key,
             temperature=temperature,
-            max_retries=2
+            max_retries=2,
+            # For OpenRouter, it's good to pass some extra headers if needed, 
+            # but standard ChatOpenAI works.
+            default_headers={
+                "HTTP-Referer": "https://github.com/jamalimubashirali/-ARIA--Autonoumous-Research-and-Intelligent-Agent",
+                "X-Title": "ARIA Research Agent"
+            }
         )
     except Exception as e:
         # Fallback to TIER_HEAVY if TIER_LIGHT setup fails directly
         if tier == TIER_LIGHT:
             return ChatOpenAI(
                 model=_MODEL_MAP[TIER_HEAVY],
-                base_url=settings.azure_openai_endpoint,
-                api_key=settings.azure_openai_api_key,
+                base_url=settings.openrouter_embedding_base_url,
+                api_key=settings.openrouter_api_key,
                 temperature=temperature,
                 max_retries=2
             )

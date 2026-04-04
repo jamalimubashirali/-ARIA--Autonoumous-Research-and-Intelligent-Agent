@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     openrouter_embedding_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_api_key: str      # Your OpenRouter API Key
     openrouter_embedding_model: str = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
+    openrouter_heavy_model: str = "qwen/qwen3.6-plus:free"   # Default free model
+    openrouter_light_model: str = "qwen/qwen3-next-80b-a3b-instruct:free"   # Default free model
     embedding_dimensions: int = 2048   # Native output with content-array input format
 
     # ==== Database (Supabase PostgreSQL) ====
