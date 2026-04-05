@@ -62,7 +62,8 @@ class Settings(BaseSettings):
     WINDOW_SECONDS: int = 60
 
     def _needs_ssl(self) -> bool:
-        return "supabase.com" in self.db_host or "render.com" in self.db_host
+        # Supabase pooler requires SSL
+        return "supabase.com" in self.db_host
 
     def _make_url(self, drivername: str) -> URL:
         """Build a SQLAlchemy URL object with proper escaping."""
@@ -76,6 +77,7 @@ class Settings(BaseSettings):
         )
         # Supabase and many production DBs require SSL
         if self._needs_ssl() and drivername.endswith("psycopg2"):
+            # psycopg2 uses sslmode in URL (require does not verify cert by default)
             return url.update_query_dict({"sslmode": "require"})
         return url
 
@@ -90,7 +92,12 @@ class Settings(BaseSettings):
     @property
     def async_connect_args(self) -> dict:
         if self._needs_ssl():
-            return {"ssl": ssl.create_default_context()}
+            # Supabase pooler often presents a cert chain that fails default verification.
+            # Use SSL without verification to prevent asyncpg from erroring.
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            return {"ssl": ctx}
         return {}
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
