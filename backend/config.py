@@ -1,4 +1,5 @@
 import json
+import ssl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import ValidationError
 from sqlalchemy import URL
@@ -60,6 +61,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_GENERAL_UNAUTH: int = 30   # requests per minute for unauthenticated
     WINDOW_SECONDS: int = 60
 
+    def _needs_ssl(self) -> bool:
+        return "supabase.com" in self.db_host or "render.com" in self.db_host
+
     def _make_url(self, drivername: str) -> URL:
         """Build a SQLAlchemy URL object with proper escaping."""
         url = URL.create(
@@ -71,7 +75,7 @@ class Settings(BaseSettings):
             database=self.db_name,
         )
         # Supabase and many production DBs require SSL
-        if "supabase.com" in self.db_host or "render.com" in self.db_host:
+        if self._needs_ssl() and drivername.endswith("psycopg2"):
             return url.update_query_dict({"sslmode": "require"})
         return url
 
@@ -82,6 +86,12 @@ class Settings(BaseSettings):
     @property
     def sync_database_url(self) -> URL:
         return self._make_url("postgresql+psycopg2")
+
+    @property
+    def async_connect_args(self) -> dict:
+        if self._needs_ssl():
+            return {"ssl": ssl.create_default_context()}
+        return {}
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

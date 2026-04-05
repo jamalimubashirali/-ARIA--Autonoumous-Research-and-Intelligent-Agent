@@ -8,16 +8,19 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from config import settings
 
 
+connect_args = {
+    "statement_cache_size": 0,
+    "prepared_statement_cache_size": 0,
+    **settings.async_connect_args,
+}
+
 engine = create_async_engine(
     settings.async_database_url,
     echo=False,
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
-    connect_args={
-        "statement_cache_size": 0,
-        "prepared_statement_cache_size": 0,
-    },
+    connect_args=connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(
