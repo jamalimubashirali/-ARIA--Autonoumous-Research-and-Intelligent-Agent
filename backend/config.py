@@ -1,6 +1,6 @@
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import field_validator, ValidationError
 from sqlalchemy import URL
 import os
 
@@ -100,4 +100,16 @@ class Settings(BaseSettings):
             return [str(origin).strip() for origin in v if str(origin).strip()]
         return v
 
-settings = Settings()
+try:
+    settings = Settings()
+except ValidationError as e:
+    # Log only field names (no secrets) to help diagnose Render deploys
+    missing = [err["loc"][0] for err in e.errors() if err.get("type") in {"missing", "value_error.missing"}]
+    invalid = [err["loc"][0] for err in e.errors() if err.get("type") not in {"missing", "value_error.missing"}]
+    print(f"[SettingsError] Missing fields: {sorted(set(missing))}")
+    print(f"[SettingsError] Invalid fields: {sorted(set(invalid))}")
+    print("[SettingsError] Full error summary:", e)
+    raise
+except Exception as e:
+    print("[SettingsError] Unexpected settings init error:", repr(e))
+    raise
