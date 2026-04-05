@@ -40,10 +40,30 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Middleware (execution order: from bottom to top, i.e., last added is outermost)
+# ---------------------------------------------------------------------------
+# Middlewares
+# ---------------------------------------------------------------------------
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from api.auth import clerk_auth_middleware
+from fastapi.responses import JSONResponse
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# 4. Request Logging (for debugging production traffic)
+async def log_request_middleware(request: Request, call_next):
+    origin = request.headers.get("origin")
+    method = request.method
+    path = request.url.path
+    logger.info(f"Incoming request: {method} {path} | Origin: {origin}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
+
+app.add_middleware(BaseHTTPMiddleware, dispatch=log_request_middleware)
 
 # 3. Innermost: Authentication
 app.add_middleware(BaseHTTPMiddleware, dispatch=clerk_auth_middleware)
@@ -51,15 +71,26 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=clerk_auth_middleware)
 # 2. Middle: Rate Limiting
 app.add_middleware(RateLimitMiddleware)
 
-# 1. Outermost: CORS (must run before anything else to add headers)
-allowed_origins_list = [origin.strip() for origin in settings.allowed_origins.split(",")]
+# 1. Outermost: CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins_list,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Global Exception Handler
+# ---------------------------------------------------------------------------
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"GLOBAL ERROR: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "message": str(exc)}
+    )
 
 # Mount routers
 app.include_router(routes.router, prefix="/api/v1")

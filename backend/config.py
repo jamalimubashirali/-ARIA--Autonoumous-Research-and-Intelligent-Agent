@@ -58,7 +58,7 @@ class Settings(BaseSettings):
 
     def _make_url(self, drivername: str) -> URL:
         """Build a SQLAlchemy URL object with proper escaping."""
-        return URL.create(
+        url = URL.create(
             drivername=drivername,
             username=self.db_user,
             password=self.db_password,
@@ -66,6 +66,10 @@ class Settings(BaseSettings):
             port=self.db_port,
             database=self.db_name,
         )
+        # Supabase and many production DBs require SSL
+        if "supabase.com" in self.db_host or "render.com" in self.db_host:
+            return url.update_query_dict({"sslmode": "require"})
+        return url
 
     @property
     def async_database_url(self) -> URL:
