@@ -1,4 +1,6 @@
+from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from sqlalchemy import URL
 import os
 
@@ -47,7 +49,7 @@ class Settings(BaseSettings):
     langchain_project: str = "ARIA-Autonomous-Research-Intelligent-Agent"
 
     # ==== Server / Security ====
-    allowed_origins: str
+    allowed_origins: List[str] = []
     redis_url: str
 
     # ==== Rate Limiting ====
@@ -80,5 +82,13 @@ class Settings(BaseSettings):
         return self._make_url("postgresql+psycopg2")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        if isinstance(v, str):
+            # Allow comma-separated env var: "https://a.com, https://b.com"
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
 settings = Settings()
