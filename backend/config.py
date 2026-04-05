@@ -1,6 +1,6 @@
-from typing import List
+import json
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator, ValidationError
+from pydantic import ValidationError
 from sqlalchemy import URL
 import os
 
@@ -49,7 +49,9 @@ class Settings(BaseSettings):
     langchain_project: str = "ARIA-Autonomous-Research-Intelligent-Agent"
 
     # ==== Server / Security ====
-    allowed_origins: List[str] = []
+    # Keep as string to avoid JSON parsing errors in env providers.
+    # Parse into list via allowed_origins_list property.
+    allowed_origins: str = ""
     redis_url: str
 
     # ==== Rate Limiting ====
@@ -81,24 +83,30 @@ class Settings(BaseSettings):
     def sync_database_url(self) -> URL:
         return self._make_url("postgresql+psycopg2")
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        env_parse_delimiter=",",
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def parse_allowed_origins(cls, v):
-        if v is None:
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        value = self.allowed_origins
+        if value is None:
             return []
-        if isinstance(v, str):
-            # Allow comma-separated env var: "https://a.com, https://b.com"
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        if isinstance(v, list):
-            return [str(origin).strip() for origin in v if str(origin).strip()]
-        return v
+        if isinstance(value, list):
+            return [str(origin).strip() for origin in value if str(origin).strip()]
+        if isinstance(value, str):
+            s = value.strip()
+            if not s:
+                return []
+            # Accept JSON array string too: ["https://a.com", "https://b.com"]
+            if s.startswith("["):
+                try:
+                    parsed = json.loads(s)
+                    if isinstance(parsed, list):
+                        return [str(origin).strip() for origin in parsed if str(origin).strip()]
+                except Exception:
+                    # Fall back to comma split below
+                    pass
+            return [origin.strip() for origin in s.split(",") if origin.strip()]
+        return [str(value).strip()] if str(value).strip() else []
 
 try:
     settings = Settings()
