@@ -45,8 +45,30 @@ app = FastAPI(
 async def log_startup_config():
     # Safe diagnostics (no secrets)
     raw = os.getenv("ALLOWED_ORIGINS", "")
-    logger.info(f"[CORS] ALLOWED_ORIGINS raw: {raw}")
-    logger.info(f"[CORS] ALLOWED_ORIGINS parsed: {settings.allowed_origins_list}")
+    print(f"[CORS] ALLOWED_ORIGINS raw: {repr(raw)}")
+    print(f"[CORS] ALLOWED_ORIGINS parsed: {settings.allowed_origins_list}")
+
+    required_env = [
+        "OPENROUTER_API_KEY",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_USER",
+        "DB_PASSWORD",
+        "TAVILY_API_KEY",
+        "FIRECRAWL_API_KEY",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_KEY",
+        "CLERK_SECRET_KEY",
+        "CLERK_JWKS_URL",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "REDIS_URL",
+        "ALLOWED_ORIGINS",
+    ]
+    for key in required_env:
+        status = "SET" if os.getenv(key) else "MISSING"
+        print(f"[EnvCheck] {key}: {status}")
 
 # ---------------------------------------------------------------------------
 # Middlewares
@@ -95,9 +117,15 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"GLOBAL ERROR: {str(exc)}", exc_info=True)
+    origin = request.headers.get("origin")
+    headers = {}
+    if origin and origin in settings.allowed_origins_list:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "message": str(exc)}
+        content={"detail": "Internal Server Error", "message": str(exc)},
+        headers=headers,
     )
 
 # Mount routers
