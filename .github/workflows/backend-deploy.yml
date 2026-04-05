@@ -5,11 +5,21 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "!.github/workflows/frontend-deploy.yml"
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Check for deploy hook secret
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL is not set"
+            exit 1
+          fi
+
       - name: Deploy to Render
         run: |
-          curl -f "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          echo "Triggering Render deployment..."
+          curl -f -s -S "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" || { echo "::error::Render deploy hook failed with status $?"; exit 1; }

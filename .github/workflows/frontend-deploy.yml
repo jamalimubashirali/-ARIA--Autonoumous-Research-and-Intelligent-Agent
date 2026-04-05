@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "frontend/**"
+      - "!.github/workflows/backend-deploy.yml"
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -12,4 +14,8 @@ jobs:
     steps:
       - name: Trigger Vercel Deploy Hook
         run: |
-          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
+          if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" ]; then
+             echo "::error::VERCEL_DEPLOY_HOOK_URL is not set"
+             exit 1
+          fi
+          curl -X POST -f -s -S "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
