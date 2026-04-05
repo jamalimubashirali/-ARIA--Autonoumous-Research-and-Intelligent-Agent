@@ -12,6 +12,10 @@ async def clerk_auth_middleware(request: Request, call_next):
     # Only protect /api/v1 routes except webhooks
     if not request.url.path.startswith("/api/v1") or request.url.path.endswith("stripe/webhook"):
         return await call_next(request)
+
+    # Let CORS preflight through without auth
+    if request.method == "OPTIONS":
+        return await call_next(request)
         
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):

@@ -33,12 +33,20 @@ from api.sharing import router as sharing_router
 from api.export import router as export_router
 from api.rate_limiter import RateLimitMiddleware
 import uvicorn
+import os
 
 app = FastAPI(
     title="ARIA API",
     description="Autonomous Research & Intelligence Agent Backend",
     version="1.0.0"
 )
+
+@app.on_event("startup")
+async def log_startup_config():
+    # Safe diagnostics (no secrets)
+    raw = os.getenv("ALLOWED_ORIGINS", "")
+    logger.info(f"[CORS] ALLOWED_ORIGINS raw: {raw}")
+    logger.info(f"[CORS] ALLOWED_ORIGINS parsed: {settings.allowed_origins_list}")
 
 # ---------------------------------------------------------------------------
 # Middlewares
